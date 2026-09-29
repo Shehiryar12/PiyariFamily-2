@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Join PiyariFamily</title>
+    <style>
+      :root {
+        --primary: #6b041d;
+        --gold: #d4a017;
+        --pink: #ffcdd9;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, Segoe UI, sans-serif;
+        background: linear-gradient(180deg, #ffcdd9 0%, #fff8fa 42%, #ffffff 100%);
+        color: #2c2c2c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: min(420px, 100%);
+        background: #fff;
+        border-radius: 24px;
+        padding: 32px 24px;
+        box-shadow: 0 18px 40px rgba(107, 4, 29, 0.12);
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 8px;
+        color: var(--primary);
+        font-size: 28px;
+      }
+      p {
+        margin: 0 0 20px;
+        color: #71717b;
+        line-height: 1.5;
+      }
+      .code {
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        background: #fff5f7;
+        color: var(--primary);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      a.button {
+        display: block;
+        text-decoration: none;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      a.secondary {
+        background: #fff;
+        color: var(--primary);
+        border: 1px solid var(--pink);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>You're invited</h1>
+      <p id="subtitle">Open the PiyariFamily app to create your account with this referral.</p>
+      <div class="code" id="code">------</div>
+      <a class="button" id="openApp" href="#">Open PiyariFamily app</a>
+      <a class="button secondary" id="copyLink" href="#">Copy invite link</a>
+    </main>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var fromQuery =
+          params.get('ref') ||
+          params.get('code') ||
+          params.get('referral_code');
+        var parts = window.location.pathname.split('/').filter(Boolean);
+        var last = parts[parts.length - 1] || '';
+        var fromPath =
+          /^[A-Za-z0-9]{6,16}$/.test(last) &&
+          !/^(invite|invite\.html|invite\.php)$/i.test(last)
+            ? last
+            : '';
+        var code = (fromQuery || fromPath || window.location.hash.replace('#', '')).replace(
+          /[^A-Za-z0-9]/g,
+          '',
+        );
+
+        if (!code) {
+          document.getElementById('subtitle').textContent =
+            'This invite link is missing a referral code.';
+          document.getElementById('openApp').style.display = 'none';
+          return;
+        }
+
+        var shareLink = window.location.href;
+        var appLink = 'piyarifamily://' + code;
+        var intentLink =
+          'intent://' +
+          code +
+          '#Intent;scheme=piyarifamily;package=com.piyarifamily;S.browser_fallback_url=' +
+          encodeURIComponent(shareLink) +
+          ';end';
+
+        document.getElementById('code').textContent = code;
+        document.getElementById('openApp').href = /android/i.test(navigator.userAgent)
+          ? intentLink
+          : appLink;
+
+        document.getElementById('copyLink').addEventListener('click', function (event) {
+          event.preventDefault();
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareLink);
+          }
+        });
+
+        if (/android/i.test(navigator.userAgent)) {
+          window.location.replace(intentLink);
+        } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          window.location.replace(appLink);
+        }
+      })();
+    </script>
+  </body>
+</html>

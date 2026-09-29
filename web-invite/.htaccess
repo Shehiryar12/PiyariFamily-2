@@ -1,0 +1,7 @@
+RewriteEngine On
+
+# Put this rule ABOVE Laravel's "send everything to index.php" rule
+# inside public/.htaccess, then copy invite.html + invite.php next to it.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9]{6,16})/?$ invite.php?ref=$1 [L,QSA]
