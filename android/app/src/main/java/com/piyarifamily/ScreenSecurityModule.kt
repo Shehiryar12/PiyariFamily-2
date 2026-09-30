@@ -22,7 +22,7 @@ class ScreenSecurityModule(private val reactContext: ReactApplicationContext) :
 
   @ReactMethod
   fun setSecure(enable: Boolean) {
-    val activity = currentActivity ?: return
+  val activity = reactContext.currentActivity ?: return
 
     activity.runOnUiThread {
       if (enable) {

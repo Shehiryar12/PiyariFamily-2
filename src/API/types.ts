@@ -17,6 +17,7 @@ export type AuthResponse = {
   account_status?: 'active' | 'inactive';
   is_deactivated?: boolean;
   requires_verification?: boolean;
+  requires_profile_completion?: boolean | number | string;
   email?: string;
   data?: {
     name?: string;

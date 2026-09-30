@@ -104,7 +104,8 @@ const VerifyEmailScreen = ({ navigation }: Props) => {
     );
 
     Toast.show('Email verified successfully');
-    navigateAfterLogin(navigation, 'SelectCountry');
+    // navigateAfterLogin(navigation, 'SelectCountry');
+    navigation.replace('Login');
   };
 
   const applyResendResult = (source: unknown, showToast: boolean) => {

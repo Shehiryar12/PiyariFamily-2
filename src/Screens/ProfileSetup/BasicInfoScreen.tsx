@@ -16,6 +16,8 @@ import {
 } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
+import Modal from 'react-native-modal';
+import { Calendar, type DateData } from 'react-native-calendars';
 import { AxiosError } from 'axios';
 import { Images } from '../../Assets';
 import AuthInput from '../../Components/AuthInput';
@@ -28,7 +30,6 @@ import DropdownOptionsOverlay, {
 } from '../../Components/DropdownOptionsOverlay';
 import {
   Api,
-  ENDPOINTS,
   getApiErrorMessage,
   resolveProfileData,
   saveProfileCache,
@@ -59,31 +60,75 @@ type Props = {
   };
 };
 
-const parseDateOfBirth = (value: string): Date | null => {
-  const cleaned = value.replace(/\s/g, '');
-  const match = cleaned.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!match) {
-    return null;
-  }
+const MIN_AGE = 18;
+const MAX_AGE = 100;
 
-  const day = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const year = Number(match[3]);
-  const date = new Date(year, month, day);
+const startOfDay = (date: Date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
 
+const addYears = (date: Date, years: number) => {
+  const next = new Date(date);
+  next.setFullYear(next.getFullYear() + years);
+  return startOfDay(next);
+};
+
+const getToday = () => startOfDay(new Date());
+const getMaxDob = () => addYears(getToday(), -MIN_AGE);
+const getMinDob = () => addYears(getToday(), -MAX_AGE);
+
+const createValidDate = (
+  year: number,
+  monthIndex: number,
+  day: number,
+): Date | null => {
+  const date = startOfDay(new Date(year, monthIndex, day));
   if (
     date.getFullYear() !== year ||
-    date.getMonth() !== month ||
+    date.getMonth() !== monthIndex ||
     date.getDate() !== day
   ) {
     return null;
   }
-
   return date;
 };
 
+const toLocalIsoDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateOfBirth = (value: string): Date | null => {
+  const cleaned = value.trim();
+  const iso = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return createValidDate(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+
+  const slash = cleaned.replace(/\s/g, '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slash) {
+    return createValidDate(
+      Number(slash[3]),
+      Number(slash[2]) - 1,
+      Number(slash[1]),
+    );
+  }
+
+  return null;
+};
+
+const formatDateDisplay = (date: Date): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day} / ${month} / ${date.getFullYear()}`;
+};
+
 const calculateAge = (date: Date): number => {
-  const today = new Date();
+  const today = getToday();
   let age = today.getFullYear() - date.getFullYear();
   const monthDiff = today.getMonth() - date.getMonth();
 
@@ -94,51 +139,44 @@ const calculateAge = (date: Date): number => {
   return age;
 };
 
-const formatDateInput = (value: string): string => {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
+const clampCalendarMonth = (date: Date) => {
+  const min = getMinDob();
+  const max = getMaxDob();
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+  const minMonth = new Date(min.getFullYear(), min.getMonth(), 1);
+  const maxMonth = new Date(max.getFullYear(), max.getMonth(), 1);
 
-  if (digits.length <= 2) {
-    return digits;
+  if (monthStart < minMonth) {
+    return min;
   }
-  if (digits.length <= 4) {
-    return `${digits.slice(0, 2)} / ${digits.slice(2)}`;
+  if (monthStart > maxMonth) {
+    return max;
   }
-  return `${digits.slice(0, 2)} / ${digits.slice(2, 4)} / ${digits.slice(4)}`;
+  return monthStart;
 };
 
-const formatBirthdayForApi = (value: string): string | null => {
-  const parsed = parseDateOfBirth(value);
-  if (!parsed) {
-    return null;
+const getDefaultPickerDate = () => {
+  const preferred = addYears(getToday(), -25);
+  const min = getMinDob();
+  const max = getMaxDob();
+  if (preferred > max) {
+    return max;
   }
-
-  const year = parsed.getFullYear();
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const day = String(parsed.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-
-const formatBirthdayToInput = (value: string): string => {
-  const cleaned = value.trim();
-  const iso = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) {
-    return `${iso[3]} / ${iso[2]} / ${iso[1]}`;
+  if (preferred < min) {
+    return min;
   }
-
-  const slash = cleaned.replace(/\s/g, '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (slash) {
-    return `${slash[1]} / ${slash[2]} / ${slash[3]}`;
-  }
-
-  return '';
+  return preferred;
 };
 
 const BasicInfoScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const [fullName, setFullName] = useState('');
   const [gender, setGender] = useState<Gender>('male');
-  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [dobPickerOpen, setDobPickerOpen] = useState(false);
+  const [calendarCursor, setCalendarCursor] = useState(
+    toLocalIsoDate(getDefaultPickerDate()),
+  );
   const [maritalStatus, setMaritalStatus] = useState<MaritalStatus | ''>('');
   const [siblings, setSiblings] = useState('');
   const [familyInformation, setFamilyInformation] = useState('');
@@ -150,13 +188,49 @@ const BasicInfoScreen = ({ navigation }: Props) => {
   });
   const [saving, setSaving] = useState(false);
 
-  const age = useMemo(() => {
-    const parsed = parseDateOfBirth(dateOfBirth);
-    if (!parsed) {
-      return null;
+  const age = useMemo(
+    () => (birthDate ? calculateAge(birthDate) : null),
+    [birthDate],
+  );
+  const minDobIso = toLocalIsoDate(getMinDob());
+  const maxDobIso = toLocalIsoDate(getMaxDob());
+  const selectedDobIso = birthDate ? toLocalIsoDate(birthDate) : '';
+
+  const openDobCalendar = () => {
+    Keyboard.dismiss();
+    setMaritalDropdownOpen(false);
+    const visibleDate = birthDate ?? getDefaultPickerDate();
+    setCalendarCursor(toLocalIsoDate(clampCalendarMonth(visibleDate)));
+    setDobPickerOpen(true);
+  };
+
+  const shiftCalendarYear = (delta: number) => {
+    const [year, month] = calendarCursor.split('-').map(Number);
+    const next = clampCalendarMonth(new Date(year + delta, month - 1, 1));
+    setCalendarCursor(toLocalIsoDate(next));
+  };
+
+  const onSelectCalendarDay = (day: DateData) => {
+    const selected = createValidDate(day.year, day.month - 1, day.day);
+    if (!selected) {
+      Toast.show('Please select a valid date of birth');
+      return;
     }
-    return calculateAge(parsed);
-  }, [dateOfBirth]);
+
+    const min = getMinDob();
+    const max = getMaxDob();
+    if (selected > max) {
+      Toast.show('You must be at least 18 years old to register.');
+      return;
+    }
+    if (selected < min) {
+      Toast.show('Please select a valid date of birth');
+      return;
+    }
+
+    setBirthDate(selected);
+    setDobPickerOpen(false);
+  };
 
   useEffect(() => {
 
@@ -174,7 +248,10 @@ const BasicInfoScreen = ({ navigation }: Props) => {
     }
 
     if (cachedProfile?.birthday) {
-      setDateOfBirth(formatBirthdayToInput(cachedProfile.birthday));
+      const parsed = parseDateOfBirth(cachedProfile.birthday);
+      if (parsed) {
+        setBirthDate(parsed);
+      }
     }
 
     const cachedMarital =
@@ -212,9 +289,14 @@ const BasicInfoScreen = ({ navigation }: Props) => {
             setGender(profile.gender);
           }
 
-          setDateOfBirth(prev =>
-            prev || (profile.birthday ? formatBirthdayToInput(profile.birthday) : ''),
-          );
+          setBirthDate(prev => {
+            if (prev) {
+              return prev;
+            }
+            return profile.birthday
+              ? parseDateOfBirth(profile.birthday)
+              : null;
+          });
 
           const marital =
             MARITAL_STATUS_FROM_API[profile.marital_status?.toLowerCase() ?? ''];
@@ -257,11 +339,11 @@ const BasicInfoScreen = ({ navigation }: Props) => {
       Toast.show('Please enter your full name');
       return;
     }
-    const birthday = formatBirthdayForApi(dateOfBirth);
-    if (!birthday) {
-      Toast.show('Please enter a valid date of birth');
+    if (!birthDate) {
+      Toast.show('Please select your date of birth');
       return;
     }
+    const birthday = toLocalIsoDate(birthDate);
     if (age === null || age < 18) {
       Toast.show('You must be at least 18 years old to register.');
       return;
@@ -403,22 +485,27 @@ const BasicInfoScreen = ({ navigation }: Props) => {
 
           <Text style={styles.fieldLabel}>{Strings.dateOfBirthLabel}</Text>
           <View style={styles.dobWrap}>
-            <View style={styles.dobRow}>
+            <TouchableOpacity
+              style={styles.dobRow}
+              activeOpacity={0.85}
+              onPress={openDobCalendar}
+            >
               <Icon
                 name="calendar-outline"
                 size={fs(20)}
                 color={Colors.primary}
                 style={styles.dobIcon}
               />
-              <TextInput
-                style={styles.dobInput}
-                placeholder={Strings.dateOfBirthPlaceholder}
-                placeholderTextColor={Colors.placeholder}
-                value={dateOfBirth}
-                onChangeText={text => setDateOfBirth(formatDateInput(text))}
-                keyboardType="number-pad"
-                maxLength={14}
-              />
+              <Text
+                style={[
+                  styles.dobInput,
+                  !birthDate && styles.dobPlaceholder,
+                ]}
+              >
+                {birthDate
+                  ? formatDateDisplay(birthDate)
+                  : Strings.dateOfBirthPlaceholder}
+              </Text>
               {age !== null ? (
                 <View style={styles.ageBadge}>
                   <Text style={styles.ageBadgeText}>
@@ -426,13 +513,102 @@ const BasicInfoScreen = ({ navigation }: Props) => {
                   </Text>
                 </View>
               ) : null}
-            </View>
+            </TouchableOpacity>
             {age !== null && age < 18 ? (
               <Text style={styles.ageErrorText}>
                 You must be at least 18 years old to register.
               </Text>
             ) : null}
           </View>
+
+          <Modal
+            isVisible={dobPickerOpen}
+            onBackdropPress={() => setDobPickerOpen(false)}
+            onBackButtonPress={() => setDobPickerOpen(false)}
+            backdropOpacity={0.45}
+            useNativeDriver
+            hideModalContentWhileAnimating
+          >
+            <View style={styles.calendarCard}>
+              <View style={styles.calendarHeader}>
+                <Text style={styles.calendarTitle}>
+                  {Strings.dateOfBirthLabel}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setDobPickerOpen(false)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Icon name="close" size={fs(22)} color={Colors.iconMuted} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.calendarYearRow}>
+                <TouchableOpacity
+                  style={styles.yearShiftBtn}
+                  onPress={() => shiftCalendarYear(-1)}
+                >
+                  <Icon
+                    name="chevron-double-left"
+                    size={fs(22)}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.calendarHint}>
+                  Jump year to pick your birth date
+                </Text>
+                <TouchableOpacity
+                  style={styles.yearShiftBtn}
+                  onPress={() => shiftCalendarYear(1)}
+                >
+                  <Icon
+                    name="chevron-double-right"
+                    size={fs(22)}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+              <Calendar
+                key={calendarCursor.slice(0, 7)}
+                current={calendarCursor}
+                minDate={minDobIso}
+                maxDate={maxDobIso}
+                onDayPress={onSelectCalendarDay}
+                onMonthChange={month => {
+                  const next = createValidDate(month.year, month.month - 1, 1);
+                  if (next) {
+                    setCalendarCursor(toLocalIsoDate(clampCalendarMonth(next)));
+                  }
+                }}
+                enableSwipeMonths
+                markedDates={
+                  selectedDobIso
+                    ? {
+                        [selectedDobIso]: {
+                          selected: true,
+                          selectedColor: Colors.primary,
+                          selectedTextColor: Colors.white,
+                        },
+                      }
+                    : undefined
+                }
+                theme={{
+                  backgroundColor: Colors.white,
+                  calendarBackground: Colors.white,
+                  selectedDayBackgroundColor: Colors.primary,
+                  selectedDayTextColor: Colors.white,
+                  todayTextColor: Colors.gold,
+                  dayTextColor: Colors.label,
+                  textDisabledColor: Colors.placeholder,
+                  arrowColor: Colors.primary,
+                  monthTextColor: Colors.primary,
+                  textMonthFontFamily: Fonts.bold,
+                  textDayFontFamily: Fonts.regular,
+                  textDayHeaderFontFamily: Fonts.medium,
+                  textMonthFontSize: FontSizes.body,
+                  textDayFontSize: FontSizes.body,
+                }}
+              />
+            </View>
+          </Modal>
 
           <Text style={styles.fieldLabel}>{Strings.maritalStatusDetail}</Text>
           <View
@@ -651,6 +827,48 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.text,
     paddingVertical: 0,
+  },
+  dobPlaceholder: {
+    color: Colors.placeholder,
+  },
+  calendarCard: {
+    backgroundColor: Colors.white,
+    borderRadius: wp('4%'),
+    paddingHorizontal: wp('2%'),
+    paddingTop: hp('1.6%'),
+    paddingBottom: hp('1.2%'),
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('2%'),
+    marginBottom: hp('0.8%'),
+  },
+  calendarTitle: {
+    fontSize: FontSizes.body,
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+  },
+  calendarYearRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('1%'),
+    marginBottom: hp('0.6%'),
+  },
+  yearShiftBtn: {
+    width: wp('10%'),
+    height: wp('10%'),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarHint: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: fs(11),
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
   },
   ageBadge: {
     backgroundColor: '#FFF3E0',

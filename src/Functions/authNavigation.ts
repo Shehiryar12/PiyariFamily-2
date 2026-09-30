@@ -92,6 +92,43 @@ export const finishAuthNavigation = async (navigation: AuthNavigation) => {
   navigateAfterLogin(navigation, route);
 };
 
+const isTruthyFlag = (value: unknown) =>
+  value === true || value === 1 || value === '1' || value === 'true';
+
+const isFalsyFlag = (value: unknown) =>
+  value === false || value === 0 || value === '0' || value === 'false';
+
+const pickProfileCompletionFlag = (response?: {
+  requires_profile_completion?: boolean | number | string;
+  data?: { requires_profile_completion?: boolean | number | string };
+} | null) =>
+  response?.requires_profile_completion ??
+  response?.data?.requires_profile_completion;
+
+export const finishLoginNavigation = async (
+  navigation: AuthNavigation,
+  response?: {
+    requires_profile_completion?: boolean | number | string;
+    data?: { requires_profile_completion?: boolean | number | string };
+  } | null,
+) => {
+  const flag = pickProfileCompletionFlag(response);
+
+  if (isTruthyFlag(flag)) {
+    store.dispatch(setSetupComplete(false));
+    navigateAfterLogin(navigation, 'SelectCountry');
+    return;
+  }
+
+  if (isFalsyFlag(flag)) {
+    store.dispatch(setSetupComplete(true));
+    navigateAfterLogin(navigation, 'Main');
+    return;
+  }
+
+  await finishAuthNavigation(navigation);
+};
+
 export const navigateAfterLogin = (
   navigation: AuthNavigation,
   route: PostLoginRoute,

@@ -23,6 +23,7 @@ import {
   Api,
   ENDPOINTS,
   getApiErrorMessage,
+  findCountryMatch,
   mapCountries,
   resolveProfileData,
   saveProfileCache,
@@ -64,6 +65,35 @@ const applyCountryPrefill = (profile: ProfileApiData) => ({
   city: profile.city ?? '',
   state: profile.state ?? '',
 });
+
+const findPakistan = (list: CountryOption[]) =>
+  list.find(
+    country =>
+      country.code.toUpperCase() === 'PK' ||
+      country.slug.toLowerCase() === 'pakistan' ||
+      country.name.toLowerCase() === 'pakistan',
+  );
+
+const defaultCountryId = (
+  list: CountryOption[],
+  profile?: ProfileApiData | null,
+) => findCountryMatch(list, profile)?.id ?? findPakistan(list)?.id ?? null;
+
+const pinCountryFirst = (list: CountryOption[], countryId: number | null) => {
+  if (countryId == null) {
+    return list;
+  }
+
+  const index = list.findIndex(country => country.id === countryId);
+  if (index <= 0) {
+    return list;
+  }
+
+  const next = [...list];
+  const [item] = next.splice(index, 1);
+  next.unshift(item);
+  return next;
+};
 
 const SelectCountryScreen = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -158,10 +188,10 @@ const SelectCountryScreen = () => {
           return;
         }
 
-        setCountries(nextCountries);
-        setSelectedId(null);
-
         const cachedProfile = store.getState().profile.profile;
+        const cachedSelectedId = defaultCountryId(nextCountries, cachedProfile);
+        setCountries(pinCountryFirst(nextCountries, cachedSelectedId));
+        setSelectedId(cachedSelectedId);
         if (cachedProfile) {
           const prefill = applyCountryPrefill(cachedProfile);
           if (prefill.city) {
@@ -184,6 +214,12 @@ const SelectCountryScreen = () => {
 
             if (res?.status == 200) {
               const profile = resolveProfileData(res?.data);
+              const profileSelectedId = defaultCountryId(
+                nextCountries,
+                profile,
+              );
+              setCountries(pinCountryFirst(nextCountries, profileSelectedId));
+              setSelectedId(profileSelectedId);
               const prefill = applyCountryPrefill(profile);
               if (prefill.city) {
                 setCity(prefill.city);

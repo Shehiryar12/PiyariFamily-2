@@ -27,7 +27,7 @@ import {
   isApiSuccess,
   pickAuthToken,
 } from '../../API';
-import { finishAuthNavigation } from '../../Functions/authNavigation';
+import { finishLoginNavigation } from '../../Functions/authNavigation';
 import { pickDisplayFirstName } from '../../Functions/welcomeGreeting';
 import { hp, wp } from '../../Functions/responsive';
 import {
@@ -77,8 +77,8 @@ const LoginScreen = ({ navigation }: Props) => {
     profile?.name,
     user?.name,
   );
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('alisher6269@gmail.com');
+  const [password, setPassword] = useState('12345678@Aa');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -96,7 +96,7 @@ const LoginScreen = ({ navigation }: Props) => {
 
       if (isLoginSuccess(response)) {
         Toast.show(response.message || 'Logged in successfully', Toast.LONG);
-        await finishAuthNavigation(navigation);
+        await finishLoginNavigation(navigation, response);
         return;
       }
 
@@ -106,7 +106,7 @@ const LoginScreen = ({ navigation }: Props) => {
 
       if (isLoginSuccess(errorData)) {
         Toast.show(errorData?.message || 'Logged in successfully', Toast.LONG);
-        await finishAuthNavigation(navigation);
+        await finishLoginNavigation(navigation, errorData);
         return;
       }
 
