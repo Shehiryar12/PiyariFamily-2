@@ -407,6 +407,10 @@ export const Strings = {
   dangerZone: 'DANGER ZONE',
   logOut: 'Log Out',
   logOutSubtitle: 'Sign out of your account',
+  logOutConfirmTitle: 'Log Out?',
+  logOutConfirmMessage: 'Are you sure you want to sign out of your account?',
+  yes: 'Yes',
+  no: 'No',
   deactivateAccount: 'Deactivate / Delete Account',
   deactivateSubtitle: 'Permanently remove your data',
 
