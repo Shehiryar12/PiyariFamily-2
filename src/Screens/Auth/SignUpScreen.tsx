@@ -56,11 +56,11 @@ type Props = {
 
 const SignUpScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
-  const [fullName, setFullName] = useState('ali');
-  const [email, setEmail] = useState('alisher6269@gmail.com');
-  const [phoneNumber, setPhoneNumber] = useState('03244147352');
-  const [password, setPassword] = useState('12345678');
-  const [confirmPassword, setConfirmPassword] = useState('12345678');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
 

@@ -77,8 +77,8 @@ const LoginScreen = ({ navigation }: Props) => {
     profile?.name,
     user?.name,
   );
-  const [email, setEmail] = useState('alisher6269@gmail.com');
-  const [password, setPassword] = useState('12345678@Aa');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {

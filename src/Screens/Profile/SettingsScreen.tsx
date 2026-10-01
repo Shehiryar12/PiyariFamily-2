@@ -125,7 +125,6 @@ const SettingsScreen = () => {
 
     try {
       const res = await Api.getProfile();
-console.log('@gettt res', res);
       if (res?.status == 200) {
         applyProfile(saveProfileCache(res?.data));
       } else if (!cachedProfile) {

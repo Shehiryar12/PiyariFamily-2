@@ -703,6 +703,21 @@ const BasicInfoScreen = ({ navigation }: Props) => {
             </View>
           </View>
 
+          <View style={styles.offerCard}>
+            <View style={styles.offerTag}>
+              <Text style={styles.offerTagValue}>50%</Text>
+              <Text style={styles.offerTagLabel}>OFF</Text>
+            </View>
+            <View style={styles.offerCopy}>
+              <Text style={styles.offerTitle}>
+                {Strings.setupOptionalOfferTitle}
+              </Text>
+              <Text style={styles.offerNote}>
+                {Strings.setupOptionalOfferNote}
+              </Text>
+            </View>
+          </View>
+
           <Text style={styles.fieldLabel}>{Strings.siblingsLabel}</Text>
           <View style={styles.optionalInputRow}>
             <Icon
@@ -931,6 +946,54 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     color: Colors.error,
     marginTop: hp('0.8%'),
+  },
+  offerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E7',
+    borderWidth: 1,
+    borderColor: Colors.goldLight,
+    borderRadius: wp('3.5%')
+    ,
+    padding: wp('3%'),
+    marginVertical: wp('2.4%'),
+    gap: wp('3%'),
+  },
+  offerTag: {
+    width: wp('14%'),
+    minHeight: wp('14%'),
+    borderRadius: wp('3%'),
+    backgroundColor: Colors.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: hp('0.6%'),
+  },
+  offerTagValue: {
+    fontSize: fs(16),
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+    lineHeight: fs(18),
+  },
+  offerTagLabel: {
+    fontSize: fs(9),
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+    letterSpacing: 1,
+  },
+  offerCopy: {
+    flex: 1,
+  },
+  offerTitle: {
+    fontSize: fs(13),
+    fontFamily: Fonts.semiBold,
+    color: Colors.primary,
+    marginBottom: hp('0.3%'),
+  },
+  offerNote: {
+    fontSize: fs(11),
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+    lineHeight: fs(16),
   },
   optionalInputRow: {
     flexDirection: 'row',

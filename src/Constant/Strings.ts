@@ -141,6 +141,10 @@ export const Strings = {
   siblingsPlaceholder: 'e.g. 2 brothers, 1 sister',
   familyInformationLabel: 'Family Information',
   familyInformationPlaceholder: 'Tell us about your family',
+  setupOptionalOfferTag: '50% OFF',
+  setupOptionalOfferTitle: 'First package perk',
+  setupOptionalOfferNote:
+    'Add optional details while setting up your profile and get 50% off when you buy your first package.',
 
   educationStep: 'Step 2 of 6 — Education',
   yourEducationTitle: 'Your Education',
