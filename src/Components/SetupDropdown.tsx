@@ -22,6 +22,7 @@ type Props = {
   iconName?: string;
   iconSource?: ImageSourcePropType;
   iconImageSize?: number;
+  iconTintColor?: string;
   iconText?: string;
   iconTextSize?: number;
   placeholder: string;
@@ -38,6 +39,7 @@ const SetupDropdown = ({
   iconName,
   iconSource,
   iconImageSize = fs(15),
+  iconTintColor,
   iconText,
   iconTextSize = fs(22),
   placeholder,
@@ -68,7 +70,11 @@ const SetupDropdown = ({
               style={[
                 styles.dropdownIcon,
                 styles.iconImage,
-                { width: iconImageSize, height: iconImageSize } as ImageStyle,
+                {
+                  width: iconImageSize,
+                  height: iconImageSize,
+                  ...(iconTintColor ? { tintColor: iconTintColor } : {}),
+                } as ImageStyle,
               ]}
               resizeMode="contain"
             />

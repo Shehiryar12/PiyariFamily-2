@@ -27,6 +27,7 @@ export const Images = {
   incomeIcon: require('./images/income.png'),
   feetIcon: require('./images/feet.png'),
   inchesIcon: require('./images/inches.png'),
+  rulerIcon: require('./images/ruler.png'),
   weightIcon: require('./images/weight.png'),
   profileReadyIllustration: require('./images/ProfileReady.png'),
   communityIcon: require('./images/community.png'),
