@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import KeyboardScrollView from '../../Components/KeyboardScrollView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-simple-toast';
 import AuthBackground from '../../Components/AuthBackground';
 import AuthFooterHint from '../../Components/AuthFooterHint';
@@ -30,6 +31,7 @@ import {
 import { AuthStackParamList } from '../../Navigation/AuthNavigator';
 import { navigateAfterLogin } from '../../Functions/authNavigation';
 import { hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { setAuthSession, store, clearProfile } from '../../Redux';
 import { pickPersonName } from '../../Functions/welcomeGreeting';
 
@@ -50,6 +52,7 @@ type Props = {
 type VerifyEmailRoute = RouteProp<AuthStackParamList, 'VerifyEmail'>;
 
 const VerifyEmailScreen = ({ navigation }: Props) => {
+  const insets = useSafeAreaInsets();
   const route = useRoute<VerifyEmailRoute>();
   const email = (route.params.email || '').trim();
   const autoSend = Boolean(route.params.autoSend);
@@ -258,21 +261,25 @@ const VerifyEmailScreen = ({ navigation }: Props) => {
               }}
             />
 
-            <View style={styles.flexSpacer} />
-
-            <View style={styles.bottomSection}>
-              <PrimaryButton
-                title={Strings.verifyAndContinue}
-                onPress={handleVerify}
-                loading={loading}
-                showArrow
-              />
-              <AuthFooterHint
-                text={Strings.spamFolderHint}
-                style={styles.footerHint}
-              />
-            </View>
           </KeyboardScrollView>
+
+          <View
+            style={[
+              styles.bottomSection,
+              { paddingBottom: getFooterBottomPadding(insets.bottom) },
+            ]}
+          >
+            <PrimaryButton
+              title={Strings.verifyAndContinue}
+              onPress={handleVerify}
+              loading={loading}
+              showArrow
+            />
+            <AuthFooterHint
+              text={Strings.spamFolderHint}
+              style={styles.footerHint}
+            />
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </AuthBackground>
@@ -308,16 +315,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: wp('2%'),
   },
-  flexSpacer: {
-    flex: 1,
-    minHeight: hp('2%'),
-  },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.5%'),
   },
   footerHint: {
-    marginTop: AuthStyles.footerHintTop,
+    marginTop: hp('1.6%'),
   },
 });
 

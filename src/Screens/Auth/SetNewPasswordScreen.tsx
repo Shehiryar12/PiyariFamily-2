@@ -9,6 +9,7 @@ import {
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import KeyboardScrollView from '../../Components/KeyboardScrollView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-simple-toast';
 import AuthBackground from '../../Components/AuthBackground';
 import AuthIconBadge from '../../Components/AuthIconBadge';
@@ -25,6 +26,7 @@ import { authService, getApiErrorMessage } from '../../API';
 import { clearSession } from '../../Redux';
 import { AuthStackParamList } from '../../Navigation/AuthNavigator';
 import { fs, hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 
 type NavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -40,6 +42,7 @@ const isPasswordValid = (password: string) =>
   /[^A-Za-z0-9]/.test(password);
 
 const SetNewPasswordScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<SetNewPasswordRoute>();
   const email = route.params.email;
@@ -123,18 +126,21 @@ const SetNewPasswordScreen = () => {
 
             <PasswordStrengthMeter password={password} />
             <PasswordRequirements password={password} />
-
-            <View style={styles.flexSpacer} />
-
-            <View style={styles.bottomSection}>
-              <PrimaryButton
-                title={Strings.resetPassword}
-                onPress={handleReset}
-                loading={loading}
-                showArrow
-              />
-            </View>
           </KeyboardScrollView>
+
+          <View
+            style={[
+              styles.bottomSection,
+              { paddingBottom: getFooterBottomPadding(insets.bottom) },
+            ]}
+          >
+            <PrimaryButton
+              title={Strings.resetPassword}
+              onPress={handleReset}
+              loading={loading}
+              showArrow
+            />
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </AuthBackground>
@@ -170,13 +176,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: wp('2%'),
   },
-  flexSpacer: {
-    flex: 1,
-    minHeight: hp('2%'),
-  },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.5%'),
   },
 });
 

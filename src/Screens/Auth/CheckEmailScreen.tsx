@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import KeyboardScrollView from '../../Components/KeyboardScrollView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-simple-toast';
 import AuthBackground from '../../Components/AuthBackground';
 import AuthFooterHint from '../../Components/AuthFooterHint';
@@ -30,6 +31,7 @@ import {
 } from '../../API';
 import { AuthStackParamList } from '../../Navigation/AuthNavigator';
 import { hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 
 type Props = {
   navigation: {
@@ -44,6 +46,7 @@ type Props = {
 type CheckEmailRoute = RouteProp<AuthStackParamList, 'CheckEmail'>;
 
 const CheckEmailScreen = ({ navigation }: Props) => {
+  const insets = useSafeAreaInsets();
   const route = useRoute<CheckEmailRoute>();
   const email = route.params.email;
   const initialCooldown =
@@ -164,22 +167,25 @@ const CheckEmailScreen = ({ navigation }: Props) => {
                 setCode('');
               }}
             />
-
-            <View style={styles.flexSpacer} />
-
-            <View style={styles.bottomSection}>
-              <PrimaryButton
-                title={Strings.verifyCode}
-                onPress={handleVerify}
-                loading={loading}
-                showArrow
-              />
-              <AuthFooterHint
-                text={Strings.spamFolderHint}
-                style={styles.footerHint}
-              />
-            </View>
           </KeyboardScrollView>
+
+          <View
+            style={[
+              styles.bottomSection,
+              { paddingBottom: getFooterBottomPadding(insets.bottom) },
+            ]}
+          >
+            <PrimaryButton
+              title={Strings.verifyCode}
+              onPress={handleVerify}
+              loading={loading}
+              showArrow
+            />
+            <AuthFooterHint
+              text={Strings.spamFolderHint}
+              style={styles.footerHint}
+            />
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </AuthBackground>
@@ -215,16 +221,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: wp('2%'),
   },
-  flexSpacer: {
-    flex: 1,
-    minHeight: hp('2%'),
-  },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.5%'),
   },
   footerHint: {
-    marginTop: AuthStyles.footerHintTop,
+    marginTop: hp('1.6%'),
   },
 });
 

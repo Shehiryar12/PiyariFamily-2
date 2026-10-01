@@ -423,6 +423,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     includeFontPadding: false,
     lineHeight: FontSizes.body + 2,
+    marginTop: hp('1.2%'),
   },
   fieldSpacing: {
     marginBottom: hp('1.2%'),

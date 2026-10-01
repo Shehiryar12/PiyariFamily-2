@@ -1,6 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AuthBackground from '../../Components/AuthBackground';
 import AuthSoftGlow from '../../Components/AuthSoftGlow';
@@ -12,6 +13,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { AuthStackParamList } from '../../Navigation/AuthNavigator';
 import { fs, hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 
 type Props = {
   navigation: {
@@ -22,13 +24,19 @@ type Props = {
 type CodeVerifiedRoute = RouteProp<AuthStackParamList, 'CodeVerified'>;
 
 const CodeVerifiedScreen = ({ navigation }: Props) => {
+  const insets = useSafeAreaInsets();
   const route = useRoute<CodeVerifiedRoute>();
   const email = route.params.email;
   return (
     <AuthBackground variant="white">
       <AuthSoftGlow />
       <View style={styles.root}>
-        <View style={styles.centerArea}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.centerArea}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <Image
             source={Images.codeVerifiedIllustration}
             style={styles.illustration}
@@ -50,9 +58,14 @@ const CodeVerifiedScreen = ({ navigation }: Props) => {
 
           <Text style={styles.title}>{Strings.codeVerifiedTitle}</Text>
           <Text style={styles.subtitle}>{Strings.codeVerifiedSubtitle}</Text>
-        </View>
+        </ScrollView>
 
-        <View style={styles.bottomSection}>
+        <View
+          style={[
+            styles.bottomSection,
+            { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          ]}
+        >
           <PrimaryButton
             title={Strings.setNewPassword}
             onPress={() => navigation.navigate('SetNewPassword', { email })}
@@ -69,12 +82,15 @@ const CodeVerifiedScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    paddingHorizontal: AuthStyles.horizontalPadding,
+  },
+  scrollView: {
+    flex: 1,
   },
   centerArea: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: AuthStyles.horizontalPadding,
     paddingBottom: hp('2%'),
   },
   illustration: {
@@ -123,7 +139,8 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.2%'),
   },
   button: {
     shadowColor: Colors.primary,
@@ -137,7 +154,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontFamily: Fonts.regular,
     textAlign: 'center',
-    marginTop: hp('2%'),
+    marginTop: hp('1.6%'),
   },
 });
 

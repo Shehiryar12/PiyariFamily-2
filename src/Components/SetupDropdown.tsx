@@ -79,15 +79,16 @@ const SetupDropdown = ({
               resizeMode="contain"
             />
           ) : iconText ? (
-            <Text
-              style={[
-                styles.dropdownIcon,
-                styles.iconText,
-                { fontSize: iconTextSize, lineHeight: iconTextSize },
-              ]}
-            >
-              {iconText}
-            </Text>
+            <View style={styles.iconTextWrap}>
+              <Text
+                style={[
+                  styles.iconText,
+                  { fontSize: iconTextSize, lineHeight: iconTextSize },
+                ]}
+              >
+                {iconText}
+              </Text>
+            </View>
           ) : (
             <Icon
               name={iconName!}
@@ -161,6 +162,12 @@ const styles = StyleSheet.create({
   dropdownIcon: {
     marginRight: wp('2.5%'),
   },
+  iconTextWrap: {
+    marginRight: wp('2.5%'),
+    height: '100%',
+    justifyContent: 'center',
+    paddingTop: hp('0.9%'),
+  },
   iconImage: {
     width: fs(15),
     height: fs(15),
@@ -170,6 +177,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.primary,
     lineHeight: fs(22),
+    includeFontPadding: false,
+    textAlignVertical: 'center',
     transform: [{ rotate: '12deg' }],
   },
   dropdownText: {

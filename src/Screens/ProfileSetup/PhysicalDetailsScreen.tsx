@@ -222,9 +222,8 @@ const PhysicalDetailsScreen = ({ navigation }: Props) => {
           <Text style={styles.fieldLabel}>{Strings.heightLabel}</Text>
           <View style={styles.heightRow}>
             <SetupDropdown
-              iconSource={Images.rulerIcon}
-              iconImageSize={fs(16)}
-              iconTintColor={Colors.primaryDark}
+              iconText="'"
+              iconTextSize={fs(20)}
               placeholder={Strings.selectFeetPlaceholder}
               value={feet ? `${feet} ft` : ''}
               options={HEIGHT_FEET_OPTIONS.map(option => `${option} ft`)}

@@ -48,6 +48,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     textAlign: 'left',
     flexShrink: 1,
+    flex: 1,
+    lineHeight: FontSizes.caption + 4,
   },
 });
 

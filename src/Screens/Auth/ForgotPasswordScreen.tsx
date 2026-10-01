@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import KeyboardScrollView from '../../Components/KeyboardScrollView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
 import AuthBackground from '../../Components/AuthBackground';
@@ -21,6 +22,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { authService, isApiSuccess, isOtpCooldownError, pickOtpCooldownSeconds } from '../../API';
 import { hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 
 type Props = {
   navigation: {
@@ -33,6 +35,7 @@ type Props = {
 };
 
 const ForgotPasswordScreen = ({ navigation }: Props) => {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -119,28 +122,31 @@ const ForgotPasswordScreen = ({ navigation }: Props) => {
               />
               <Text style={styles.hintText}>{Strings.secureOtpHint}</Text>
             </View>
-
-            <View style={styles.flexSpacer} />
-
-            <View style={styles.bottomSection}>
-              <PrimaryButton
-                title={Strings.sendResetCode}
-                onPress={handleSendCode}
-                loading={loading}
-                showArrow
-              />
-
-              <TouchableOpacity
-                style={styles.backToLoginBtn}
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.backToLoginText}>
-                  {Strings.backToLogIn}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </KeyboardScrollView>
+
+          <View
+            style={[
+              styles.bottomSection,
+              { paddingBottom: getFooterBottomPadding(insets.bottom) },
+            ]}
+          >
+            <PrimaryButton
+              title={Strings.sendResetCode}
+              onPress={handleSendCode}
+              loading={loading}
+              showArrow
+            />
+
+            <TouchableOpacity
+              style={styles.backToLoginBtn}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.backToLoginText}>
+                {Strings.backToLogIn}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </AuthBackground>
@@ -191,17 +197,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: hp('2.1%'),
   },
-  flexSpacer: {
-    flex: 1,
-    minHeight: hp('2%'),
-  },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.5%'),
+    backgroundColor: Colors.white,
   },
   backToLoginBtn: {
     alignItems: 'center',
-    marginTop: AuthStyles.bottomLinkTop,
+    marginTop: hp('2.2%'),
   },
   backToLoginText: {
     fontSize: FontSizes.bodyLarge,

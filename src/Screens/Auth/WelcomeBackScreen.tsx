@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import AuthBackground from '../../Components/AuthBackground';
@@ -14,6 +15,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { AuthStackParamList } from '../../Navigation/AuthNavigator';
 import { fs, hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 import {
   clearAuth,
   clearHomeMatches,
@@ -29,6 +31,7 @@ type NavigationProp = NativeStackNavigationProp<
 >;
 
 const WelcomeBackScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
 
   const handleLogin = () => {
@@ -88,7 +91,12 @@ const WelcomeBackScreen = () => {
           </View>
         </View>
 
-        <View style={styles.bottomSection}>
+        <View
+          style={[
+            styles.bottomSection,
+            { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          ]}
+        >
           <PrimaryButton
             title={Strings.logInNow}
             onPress={handleLogin}
@@ -215,7 +223,7 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingTop: hp('1.2%'),
   },
   button: {
     shadowColor: Colors.primary,

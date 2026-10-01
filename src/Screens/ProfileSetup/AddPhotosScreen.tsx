@@ -192,13 +192,15 @@ const AddPhotosScreen = ({ navigation }: Props) => {
       (photo): photo is UploadFile => photo !== null,
     );
 
-    setSaving(true);
+    // setSaving(true);
 
     try {
       if (selectedPhotos.length) {
         const res = await Api.uploadProfilePhotos(selectedPhotos);
         const uploaded = res?.status == 200 || res?.success === true;
-
+        console.log('uploaded', uploaded);
+        console.log('res', res);
+        return;
         if (!uploaded) {
           Toast.show(res?.message ?? 'Failed to upload photos', Toast.LONG);
           return;

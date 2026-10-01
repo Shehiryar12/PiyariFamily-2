@@ -1,7 +1,8 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AuthBackground from '../../Components/AuthBackground';
 import AuthSoftGlow from '../../Components/AuthSoftGlow';
@@ -13,6 +14,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { AuthStackParamList } from '../../Navigation/AuthNavigator';
 import { fs, hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 
 type NavigationProp = NativeStackNavigationProp<
   AuthStackParamList,
@@ -25,6 +27,7 @@ const STATUS_CARDS = [
 ] as const;
 
 const PasswordResetSuccessScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
 
   const handleGoToLogin = () => {
@@ -35,7 +38,12 @@ const PasswordResetSuccessScreen = () => {
     <AuthBackground variant="white">
       <AuthSoftGlow />
       <View style={styles.root}>
-        <View style={styles.centerArea}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.centerArea}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <Image
             source={Images.passwordResetIllustration}
             style={styles.illustration}
@@ -66,9 +74,14 @@ const PasswordResetSuccessScreen = () => {
               </View>
             ))}
           </View>
-        </View>
+        </ScrollView>
 
-        <View style={styles.bottomSection}>
+        <View
+          style={[
+            styles.bottomSection,
+            { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          ]}
+        >
           <PrimaryButton
             title={Strings.goToLogIn}
             onPress={handleGoToLogin}
@@ -84,12 +97,15 @@ const PasswordResetSuccessScreen = () => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    paddingHorizontal: AuthStyles.horizontalPadding,
+  },
+  scrollView: {
+    flex: 1,
   },
   centerArea: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: AuthStyles.horizontalPadding,
     paddingBottom: hp('2%'),
   },
   illustration: {
@@ -158,7 +174,8 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.2%'),
   },
   button: {
     shadowColor: Colors.primary,
