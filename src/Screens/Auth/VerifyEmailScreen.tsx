@@ -36,6 +36,7 @@ import { pickPersonName } from '../../Functions/welcomeGreeting';
 type Props = {
   navigation: {
     goBack: () => void;
+    canGoBack?: () => boolean;
     replace: (
       screen: string,
       params?: {
@@ -220,6 +221,15 @@ const VerifyEmailScreen = ({ navigation }: Props) => {
     sendOtp(true, true);
   };
 
+  const handleBack = () => {
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.replace('SignUp');
+  };
+
   return (
     <AuthBackground variant="white">
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -228,7 +238,7 @@ const VerifyEmailScreen = ({ navigation }: Props) => {
             style={styles.scrollView}
             contentContainerStyle={styles.scroll}
           >
-            <BackButton variant="gray" onPress={() => navigation.goBack()} />
+            <BackButton variant="gray" onPress={handleBack} />
 
             <AuthIconBadge iconName="email-check-outline" />
 

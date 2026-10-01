@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  type ScrollView as RNScrollView,
 } from 'react-native';
 import {
   SafeAreaView,
@@ -182,11 +183,42 @@ const BasicInfoScreen = ({ navigation }: Props) => {
   const [familyInformation, setFamilyInformation] = useState('');
   const [maritalDropdownOpen, setMaritalDropdownOpen] = useState(false);
   const maritalAnchorRef = useRef<View>(null);
+  const scrollRef = useRef<RNScrollView>(null);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const handleMaritalPress = useGuardedDropdownPress(() => {
     Keyboard.dismiss();
     setMaritalDropdownOpen(prev => !prev);
   });
   const [saving, setSaving] = useState(false);
+
+  const scrollFieldIntoView = () => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    });
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, Platform.OS === 'ios' ? 120 : 280);
+  };
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, event => {
+      setKeyboardInset(event.endCoordinates.height);
+      scrollFieldIntoView();
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardInset(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const age = useMemo(
     () => (birthDate ? calculateAge(birthDate) : null),
@@ -408,11 +440,24 @@ const BasicInfoScreen = ({ navigation }: Props) => {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <ScrollView
-          showsVerticalScrollIndicator={true}
-          contentContainerStyle={styles.scrollContent}
+          ref={scrollRef}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingBottom:
+                hp('2%') +
+                (keyboardInset > 0
+                  ? Math.max(keyboardInset - getFooterBottomPadding(insets.bottom), hp('8%'))
+                  : 0),
+            },
+          ]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets
           nestedScrollEnabled
           removeClippedSubviews={false}
         >
@@ -675,6 +720,7 @@ const BasicInfoScreen = ({ navigation }: Props) => {
               placeholderTextColor={Colors.placeholder}
               value={siblings}
               onChangeText={setSiblings}
+              onFocus={scrollFieldIntoView}
             />
             <View style={styles.optionalBadge}>
               <Text style={styles.optionalBadgeText}>{Strings.optional}</Text>
@@ -695,6 +741,7 @@ const BasicInfoScreen = ({ navigation }: Props) => {
               placeholderTextColor={Colors.placeholder}
               value={familyInformation}
               onChangeText={setFamilyInformation}
+              onFocus={scrollFieldIntoView}
             />
             <View style={styles.optionalBadge}>
               <Text style={styles.optionalBadgeText}>{Strings.optional}</Text>

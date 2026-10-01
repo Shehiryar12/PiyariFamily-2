@@ -13,7 +13,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { fs, hp, wp } from '../../Functions/responsive';
-import { setLastAccount, setSetupComplete, store } from '../../Redux';
+import { setAuthSession, setLastAccount, setSetupComplete, store } from '../../Redux';
 import { pickPersonName } from '../../Functions/welcomeGreeting';
 
 type Props = {
@@ -26,18 +26,35 @@ type Props = {
 const ProfileReadyScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
 
-  const goToLogin = () => {
+  const goToHome = () => {
     const { auth, profile } = store.getState();
+    const cached = profile.profile;
     store.dispatch(setSetupComplete(true));
     store.dispatch(
       setLastAccount({
-        name: pickPersonName(profile.profile?.name, auth.user?.name),
-        email: auth.user?.email || profile.profile?.email,
+        name: pickPersonName(cached?.name, auth.user?.name),
+        email: auth.user?.email || cached?.email,
       }),
     );
+
+    if (!auth.user && cached) {
+      const userId = Number(cached.id);
+      store.dispatch(
+        setAuthSession({
+          user: {
+            id: Number.isFinite(userId) ? userId : 0,
+            name: cached.name || '',
+            email: cached.email || '',
+            phone: cached.phone || '',
+            is_verified: cached.is_verified,
+          },
+        }),
+      );
+    }
+
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Login' }],
+      routes: [{ name: 'Main' }],
     });
   };
 
@@ -84,7 +101,7 @@ const ProfileReadyScreen = ({ navigation }: Props) => {
         >
           <PrimaryButton
             title={Strings.continueBtn}
-            onPress={goToLogin}
+            onPress={goToHome}
             showArrow
           />
         </View>

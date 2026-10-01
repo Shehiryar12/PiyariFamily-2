@@ -93,7 +93,6 @@ const LoginScreen = ({ navigation }: Props) => {
         email: email.trim(),
         password,
       });
-
       if (isLoginSuccess(response)) {
         Toast.show(response.message || 'Logged in successfully', Toast.LONG);
         await finishLoginNavigation(navigation, response);

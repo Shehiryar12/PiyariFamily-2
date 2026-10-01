@@ -109,7 +109,7 @@ const SignUpScreen = ({ navigation }: Props) => {
         response.success !== false
       ) {
         Toast.show(response.message || 'Account created successfully', Toast.LONG);
-        navigation.replace('VerifyEmail', {
+        navigation.navigate('VerifyEmail', {
           email: email.trim(),
           password,
           name: fullName.trim(),
