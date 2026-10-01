@@ -102,6 +102,7 @@ const SettingsScreen = () => {
 
   const applyProfile = useCallback((rawProfile: ReturnType<typeof saveProfileCache>) => {
     const profile = mapProfileToSettings(rawProfile);
+    console.log('@applyProfile profile', profile);
     setProfileName(profile.name);
     setProfileMeta(profile.meta);
     setIsVerified(profile.isVerified);
@@ -123,7 +124,7 @@ const SettingsScreen = () => {
 
     try {
       const res = await Api.getProfile();
-console.log('res', res);
+console.log('@gettt res', res);
       if (res?.status == 200) {
         applyProfile(saveProfileCache(res?.data));
       } else if (!cachedProfile) {

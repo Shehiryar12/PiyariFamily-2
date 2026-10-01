@@ -1,9 +1,12 @@
 import { AxiosError, AxiosRequestConfig } from 'axios';
 import { apiClient } from './apiClient';
 import { ENDPOINTS } from './endpoints';
-import { toProfileUpdateFormData, type FormValue, type UploadFile } from './formData';
-import { profileStorage } from './profileStorage';
-import { userStorage } from './userStorage';
+import {
+  toProfileUpdateFormData,
+  toSetupPhotosFormData,
+  type FormValue,
+  type UploadFile,
+} from './formData';
 import type { ProfileApiData, PhotoVisibilityResponse, CompleteProfileResponse } from './mappers/profileMapper';
 import { mapCompleteProfile } from './mappers/profileMapper';
 import { isApiSuccess } from './types';
@@ -206,22 +209,14 @@ export const Api = {
     return { status, ...data };
   },
 
-  uploadProfilePhotos: async (photos: UploadFile[]) => {
-    const profile = profileStorage.get();
-    const user = userStorage.getUser();
-    const payload: Record<string, FormValue> = {};
-    const name = profile?.name || user?.name;
-    const gender = profile?.gender;
+  uploadProfilePhotos: async (photos: UploadFile[], mainIndex = 0) => {
+    const formData = await toSetupPhotosFormData(photos, mainIndex);
+    const { status, data } = await apiClient.postFormData<UpdateProfileResponse>(
+      ENDPOINTS.PROFILE_PHOTOS,
+      formData,
+    );
 
-    if (name) {
-      payload.name = name;
-    }
-
-    if (gender) {
-      payload.gender = gender;
-    }
-
-    return Api.updateProfile(payload, photos);
+    return { status, ...data };
   },
 
   completeProfile: async () => {

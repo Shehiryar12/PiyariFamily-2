@@ -277,3 +277,19 @@ export const toProfilePhotoActionFormData = async (
 
   return formData;
 };
+
+export const toSetupPhotosFormData = async (
+  photos: UploadFile[],
+  mainIndex = 0,
+) => {
+  const formData = new FormData();
+  const parts = await resolvePhotosParts(photos);
+  parts.forEach(part => {
+    formData.append(
+      'photos[]',
+      toNativeFilePart(part) as unknown as Blob,
+    );
+  });
+  formData.append('main_index', String(mainIndex));
+  return formData;
+};

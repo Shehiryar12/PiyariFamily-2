@@ -188,19 +188,28 @@ const AddPhotosScreen = ({ navigation }: Props) => {
       return;
     }
 
-    const selectedPhotos = localPhotos.filter(
-      (photo): photo is UploadFile => photo !== null,
+    const selectedSlots = localPhotos
+      .map((photo, index) => ({ photo, index }))
+      .filter(
+        (item): item is { photo: UploadFile; index: number } =>
+          item.photo !== null,
+      );
+    const selectedPhotos = selectedSlots.map(item => item.photo);
+    const mainPhotoIndex = Math.max(
+      selectedSlots.findIndex(item => item.index === 0),
+      0,
     );
 
-    // setSaving(true);
+    setSaving(true);
 
     try {
       if (selectedPhotos.length) {
-        const res = await Api.uploadProfilePhotos(selectedPhotos);
+        const res = await Api.uploadProfilePhotos(
+          selectedPhotos,
+          mainPhotoIndex,
+        );
         const uploaded = res?.status == 200 || res?.success === true;
-        console.log('uploaded', uploaded);
-        console.log('res', res);
-        return;
+        
         if (!uploaded) {
           Toast.show(res?.message ?? 'Failed to upload photos', Toast.LONG);
           return;

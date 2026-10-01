@@ -396,7 +396,6 @@ const BasicInfoScreen = ({ navigation }: Props) => {
       birthday,
       gender,
       marital_status: marital,
-      'marital status': marital,
     };
 
     if (siblings.trim()) {
@@ -407,10 +406,8 @@ const BasicInfoScreen = ({ navigation }: Props) => {
       payload.family_information = familyInformation.trim();
       payload.family_info = familyInformation.trim();
     }
-console.log('payload of basic info',payload);
     try {
       const res = await Api.updateProfileBasicInfo(payload);
-console.log('res of basic info',res);
       if (res?.status == 200 || res?.success === true || res?.success == 200) {
         saveProfileCache({
           ...(res.user ?? {}),
