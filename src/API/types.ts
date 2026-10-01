@@ -18,6 +18,8 @@ export type AuthResponse = {
   is_deactivated?: boolean;
   requires_verification?: boolean;
   requires_profile_completion?: boolean | number | string;
+  profile_completed?: boolean | number | string;
+  profile_step?: number | string;
   email?: string;
   data?: {
     name?: string;
@@ -27,6 +29,9 @@ export type AuthResponse = {
     token?: string;
     access_token?: string;
     accessToken?: string;
+    requires_profile_completion?: boolean | number | string;
+    profile_completed?: boolean | number | string;
+    profile_step?: number | string;
   };
   resend_after_seconds?: number;
 };

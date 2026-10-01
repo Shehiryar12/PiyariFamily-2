@@ -223,6 +223,7 @@ const PhysicalDetailsScreen = ({ navigation }: Props) => {
           <View style={styles.heightRow}>
             <SetupDropdown
               iconText="'"
+              iconTextSize={fs(18)}
               placeholder={Strings.selectFeetPlaceholder}
               value={feet ? `${feet} ft` : ''}
               options={HEIGHT_FEET_OPTIONS.map(option => `${option} ft`)}
@@ -238,6 +239,7 @@ const PhysicalDetailsScreen = ({ navigation }: Props) => {
             />
             <SetupDropdown
               iconSource={Images.inchesIcon}
+              iconImageSize={fs(9)}
               placeholder={Strings.selectInchesPlaceholder}
               value={inches ? `${inches} in` : ''}
               options={HEIGHT_INCHES_OPTIONS.map(option => `${option} in`)}

@@ -23,6 +23,7 @@ type Props = {
   iconSource?: ImageSourcePropType;
   iconImageSize?: number;
   iconText?: string;
+  iconTextSize?: number;
   placeholder: string;
   value: string;
   options: readonly string[];
@@ -38,6 +39,7 @@ const SetupDropdown = ({
   iconSource,
   iconImageSize = fs(15),
   iconText,
+  iconTextSize = fs(22),
   placeholder,
   value,
   options,
@@ -71,7 +73,13 @@ const SetupDropdown = ({
               resizeMode="contain"
             />
           ) : iconText ? (
-            <Text style={[styles.dropdownIcon, styles.iconText]}>
+            <Text
+              style={[
+                styles.dropdownIcon,
+                styles.iconText,
+                { fontSize: iconTextSize, lineHeight: iconTextSize },
+              ]}
+            >
               {iconText}
             </Text>
           ) : (

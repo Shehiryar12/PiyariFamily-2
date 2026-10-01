@@ -40,7 +40,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { fs, hp, wp } from '../../Functions/responsive';
-import { setSetupComplete, store } from '../../Redux';
+import { setAuthSession, setSetupComplete, store } from '../../Redux';
 
 type Props = {
   navigation: {
@@ -153,6 +153,18 @@ const AddPhotosScreen = ({ navigation }: Props) => {
       accountStorage.setStatus(accountStatus);
       if (cached.profile_completed !== false) {
         store.dispatch(setSetupComplete(true));
+        const userId = Number(cached.id);
+        store.dispatch(
+          setAuthSession({
+            user: {
+              id: Number.isFinite(userId) ? userId : 0,
+              name: cached.name || '',
+              email: cached.email || '',
+              phone: cached.phone || '',
+              is_verified: cached.is_verified,
+            },
+          }),
+        );
       }
 
       Toast.show(

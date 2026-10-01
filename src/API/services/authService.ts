@@ -109,16 +109,20 @@ export const pickAuthToken = (response?: AuthResponse | null) =>
 const pickAuthUser = (response?: AuthResponse | null) =>
   response?.user || response?.data?.user || null;
 
-const saveAuthSession = (response: AuthResponse) => {
+const saveAuthSession = (
+  response: AuthResponse,
+  options?: { persistUser?: boolean },
+) => {
   const token = pickAuthToken(response);
   const user = pickAuthUser(response);
   const existingUser = store.getState().auth.user;
+  const persistUser = options?.persistUser !== false;
 
   store.dispatch(
     setAuthSession({
-      ...(user
-        ? {
-            user: {
+      user: persistUser
+        ? user
+          ? {
               ...user,
               name:
                 pickPersonName(
@@ -126,9 +130,9 @@ const saveAuthSession = (response: AuthResponse) => {
                   existingUser?.name,
                   store.getState().profile.profile?.name,
                 ) || '',
-            },
-          }
-        : {}),
+            }
+          : existingUser
+        : null,
       ...(token ? { accessToken: token } : {}),
     }),
   );
@@ -139,7 +143,13 @@ const saveAuthSession = (response: AuthResponse) => {
       existingUser?.name,
       store.getState().profile.profile?.name,
     );
-    saveProfileCache({ ...user, ...(resolvedName ? { name: resolvedName } : {}) });
+    saveProfileCache({
+      ...user,
+      ...(resolvedName ? { name: resolvedName } : {}),
+      profile_step: response.profile_step ?? response.data?.profile_step,
+      profile_completed:
+        response.profile_completed ?? response.data?.profile_completed,
+    });
     store.dispatch(
       setLastAccount({
         name: resolvedName,
@@ -155,6 +165,26 @@ const saveAuthSession = (response: AuthResponse) => {
 const shouldSaveAuthSession = (response: AuthResponse) =>
   Boolean(pickAuthToken(response));
 
+const isIncompleteProfileLogin = (response?: AuthResponse | null) => {
+  const flag =
+    response?.requires_profile_completion ??
+    response?.data?.requires_profile_completion;
+  if (
+    flag === true ||
+    flag === 1 ||
+    flag === 'true' ||
+    flag === '1'
+  ) {
+    return true;
+  }
+
+  const completed =
+    response?.profile_completed ?? response?.data?.profile_completed;
+  return (
+    completed === false || completed === 0 || completed === '0'
+  );
+};
+
 export const authService = {
   login: async (payload: LoginPayload) => {
     try {
@@ -168,7 +198,9 @@ export const authService = {
       );
 
       if (shouldSaveAuthSession(response)) {
-        saveAuthSession(response);
+        saveAuthSession(response, {
+          persistUser: !isIncompleteProfileLogin(response),
+        });
       }
 
       return response;
@@ -177,7 +209,9 @@ export const authService = {
         ?.data;
 
       if (errorData && shouldSaveAuthSession(errorData)) {
-        saveAuthSession(errorData);
+        saveAuthSession(errorData, {
+          persistUser: !isIncompleteProfileLogin(errorData),
+        });
       }
 
       throw error;
