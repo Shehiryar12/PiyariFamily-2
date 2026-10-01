@@ -95,6 +95,7 @@ export type SettingsProfileData = {
   name: string;
   meta: string;
   isVerified: boolean;
+  isProfileComplete: boolean;
   profilePhoto: string | null;
   profilePictureVisible: boolean;
   additionalPhotosVisible: boolean;
@@ -1262,6 +1263,7 @@ export const mapProfileToSettings = (
     name: form.fullName,
     meta,
     isVerified: Boolean(profile?.is_verified),
+    isProfileComplete: parseVisibilityFlag(profile?.profile_completed) === true,
     profilePhoto: form.profilePhoto,
     profilePictureVisible:
       parseVisibilityFlag(profile?.profile_photo_visible) ?? true,

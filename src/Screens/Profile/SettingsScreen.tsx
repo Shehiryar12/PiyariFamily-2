@@ -80,7 +80,8 @@ const SettingsScreen = () => {
   const profilePhoto = useAppSelector(selectProfilePhoto);
   const [profileName, setProfileName] = useState(user?.name ?? '');
   const [profileMeta, setProfileMeta] = useState('');
-  const [isVerified, setIsVerified] = useState(false);
+  // const [isVerified, setIsVerified] = useState(false);
+  const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [profilePictureVisible, setProfilePictureVisible] = useState(true);
   const [additionalPhotosVisible, setAdditionalPhotosVisible] = useState(true);
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -102,10 +103,10 @@ const SettingsScreen = () => {
 
   const applyProfile = useCallback((rawProfile: ReturnType<typeof saveProfileCache>) => {
     const profile = mapProfileToSettings(rawProfile);
-    console.log('@applyProfile profile', profile);
     setProfileName(profile.name);
     setProfileMeta(profile.meta);
-    setIsVerified(profile.isVerified);
+    // setIsVerified(profile.isVerified);
+    setIsProfileComplete(profile.isProfileComplete);
     if (!pendingVisibilityRef.current && !visibilityInFlightRef.current) {
       setProfilePictureVisible(profile.profilePictureVisible);
       setAdditionalPhotosVisible(profile.additionalPhotosVisible);
@@ -334,14 +335,30 @@ console.log('@gettt res', res);
             resizeMode="cover"
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{profileName || '-'}</Text>
-            <Text style={styles.profileMeta}>{profileMeta || '-'}</Text>
-            {isVerified ? (
+            <Text style={styles.profileName} numberOfLines={1}>
+              {profileName || '-'}
+            </Text>
+            <Text style={styles.profileMeta} numberOfLines={1}>
+              {profileMeta || '-'}
+            </Text>
+            {isProfileComplete ? (
+              <View style={styles.readyBadge}>
+                <Icon
+                  name="check-decagram"
+                  size={fs(13)}
+                  color={Colors.gold}
+                />
+                <Text style={styles.readyBadgeText}>
+                  {Strings.profileCompleteLabel}
+                </Text>
+              </View>
+            ) : null}
+            {/* {isVerified ? (
               <View style={styles.verifiedBadge}>
                 <Icon name="shield-check" size={fs(11)} color={Colors.gold} />
                 <Text style={styles.verifiedText}>{Strings.verifiedLabel}</Text>
               </View>
-            ) : null}
+            ) : null} */}
           </View>
           <TouchableOpacity
             activeOpacity={0.85}
@@ -586,6 +603,7 @@ const styles = StyleSheet.create({
     borderRadius: wp('4.5%'),
     padding: wp('4%'),
     marginBottom: hp('2%'),
+    overflow: 'visible',
   },
   profileImage: {
     width: wp('16%'),
@@ -597,6 +615,8 @@ const styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
+    minWidth: 0,
+    marginRight: wp('2%'),
   },
   profileName: {
     fontSize: fs(16),
@@ -620,10 +640,23 @@ const styles = StyleSheet.create({
     paddingVertical: hp('0.25%'),
     borderRadius: wp('2.5%'),
   },
-  verifiedText: {
+  readyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: wp('1.2%'),
+    backgroundColor: '#FFF8E7',
+    borderWidth: 1,
+    borderColor: Colors.goldLight,
+    paddingHorizontal: wp('2.4%'),
+    paddingVertical: hp('0.32%'),
+    borderRadius: wp('5%'),
+  },
+  readyBadgeText: {
     fontSize: fs(10),
     fontFamily: Fonts.semiBold,
     color: Colors.gold,
+    letterSpacing: 0.3,
   },
   editProfileLink: {
     fontSize: fs(11),

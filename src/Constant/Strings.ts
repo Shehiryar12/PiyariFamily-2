@@ -303,6 +303,7 @@ export const Strings = {
   accept: 'Accept',
   today: 'Today',
   verifiedLabel: 'Verified',
+  profileCompleteLabel: 'Serious Member',
 
   profilePreview: 'Profile Preview',
   readMore: 'Read more',
