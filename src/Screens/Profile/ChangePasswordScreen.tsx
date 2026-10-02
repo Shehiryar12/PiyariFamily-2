@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import {
-  Keyboard,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import KeyboardScrollView from '../../Components/KeyboardScrollView';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -25,10 +26,7 @@ import PrimaryButton from '../../Components/PrimaryButton';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
-import {
-  authService,
-  ENDPOINTS,
-} from '../../API';
+import { authService } from '../../API';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
@@ -38,6 +36,8 @@ type NavigationProp = NativeStackNavigationProp<
   ProfileStackParamList,
   'ChangePassword'
 >;
+
+const isCompactScreen = Dimensions.get('window').height < 740;
 
 const isPasswordValid = (password: string) =>
   password.length >= 8 &&
@@ -143,92 +143,96 @@ const ChangePasswordScreen = () => {
         style={styles.topGlow}
       />
 
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.flex}>
-          <ScreenHeader
-            title={Strings.changePassword}
-            onBack={() => navigation.goBack()}
-            style={styles.screenHeader}
+      <ScreenHeader
+        title={Strings.changePassword}
+        onBack={() => navigation.goBack()}
+        style={styles.screenHeader}
+      />
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={styles.flex}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          bounces={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          ]}
+        >
+          <View style={styles.iconBadge}>
+            <LinearGradient
+              colors={[Colors.goldLight, Colors.gold]}
+              style={styles.iconGradient}
+            >
+              <Icon
+                name="key-variant"
+                size={fs(isCompactScreen ? 22 : 28)}
+                color={Colors.white}
+              />
+            </LinearGradient>
+          </View>
+
+          <Text style={styles.title}>{Strings.updateYourPassword}</Text>
+          <Text style={styles.subtitle}>{Strings.changePasswordSubtitle}</Text>
+
+          <PasswordField
+            label={Strings.currentPasswordLabel}
+            placeholder={Strings.currentPasswordPlaceholder}
+            icon="lock-outline"
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
           />
 
-          <KeyboardScrollView
-            style={styles.flex}
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: getFooterBottomPadding(insets.bottom) },
-            ]}
-          >
-            <View style={styles.iconBadge}>
-              <LinearGradient
-                colors={[Colors.goldLight, Colors.gold]}
-                style={styles.iconGradient}
-              >
-                <Icon name="key-variant" size={fs(28)} color={Colors.white} />
-              </LinearGradient>
-            </View>
+          <PasswordField
+            label={Strings.newPasswordLabel}
+            placeholder={Strings.newPasswordPlaceholder}
+            icon="shield-check-outline"
+            value={newPassword}
+            onChangeText={setNewPassword}
+          />
 
-            <Text style={styles.title}>{Strings.updateYourPassword}</Text>
-            <Text style={styles.subtitle}>
-              {Strings.changePasswordSubtitle}
+          <PasswordField
+            label={Strings.confirmNewPasswordLabel}
+            placeholder={Strings.confirmNewPasswordPlaceholder}
+            icon="shield-check-outline"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+
+          <PasswordStrengthMeter password={newPassword} />
+          <PasswordRequirements password={newPassword} />
+
+          <View style={styles.securityNote}>
+            <Icon
+              name="shield-check-outline"
+              size={fs(18)}
+              color={Colors.primary}
+            />
+            <Text style={styles.securityNoteText}>
+              {Strings.passwordSecurityNote}
             </Text>
+          </View>
 
-            <PasswordField
-              label={Strings.currentPasswordLabel}
-              placeholder={Strings.currentPasswordPlaceholder}
-              icon="lock-outline"
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-            />
+          <PrimaryButton
+            title={Strings.updatePassword}
+            onPress={handleUpdate}
+            loading={loading}
+            showArrow
+          />
 
-            <PasswordField
-              label={Strings.newPasswordLabel}
-              placeholder={Strings.newPasswordPlaceholder}
-              icon="shield-check-outline"
-              value={newPassword}
-              onChangeText={setNewPassword}
-            />
-
-            <PasswordStrengthMeter password={newPassword} />
-            <PasswordRequirements password={newPassword} />
-
-            <PasswordField
-              label={Strings.confirmNewPasswordLabel}
-              placeholder={Strings.confirmNewPasswordPlaceholder}
-              icon="shield-check-outline"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-
-            <View style={styles.securityNote}>
-              <Icon
-                name="shield-check-outline"
-                size={fs(18)}
-                color={Colors.primary}
-              />
-              <Text style={styles.securityNoteText}>
-                {Strings.passwordSecurityNote}
-              </Text>
-            </View>
-
-            <PrimaryButton
-              title={Strings.updatePassword}
-              onPress={handleUpdate}
-              loading={loading}
-              showArrow
-            />
-
-            <TouchableOpacity
-              style={styles.forgotWrap}
-              activeOpacity={0.85}
-              onPress={() => Toast.show('Password reset link sent')}
-            >
-              <Text style={styles.forgotText}>
-                {Strings.forgotYourPassword}
-              </Text>
-            </TouchableOpacity>
-          </KeyboardScrollView>
-        </View>
-      </TouchableWithoutFeedback>
+          <TouchableOpacity
+            style={styles.forgotWrap}
+            activeOpacity={0.85}
+            onPress={() => Toast.show('Password reset link sent')}
+          >
+            <Text style={styles.forgotText}>{Strings.forgotYourPassword}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -249,31 +253,32 @@ const styles = StyleSheet.create({
     height: hp('18%'),
   },
   screenHeader: {
-    marginBottom: hp('1%'),
+    marginBottom: hp(isCompactScreen ? '0.4%' : '1%'),
     zIndex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: AuthStyles.horizontalPadding,
-    paddingTop: hp('0.5%'),
+    paddingTop: hp('0.4%'),
   },
   iconBadge: {
     alignSelf: 'center',
-    marginBottom: hp('1.8%'),
-    marginTop: hp('0.5%'),
+    marginBottom: hp(isCompactScreen ? '1%' : '1.8%'),
+    marginTop: hp('0.2%'),
   },
   iconGradient: {
-    width: wp('18%'),
-    height: wp('18%'),
-    borderRadius: wp('4.5%'),
+    width: wp(isCompactScreen ? '13%' : '18%'),
+    height: wp(isCompactScreen ? '13%' : '18%'),
+    borderRadius: wp(isCompactScreen ? '3.2%' : '4.5%'),
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: FontSizes.h2,
+    fontSize: isCompactScreen ? FontSizes.h3 : FontSizes.h2,
     fontFamily: Fonts.bold,
     color: Colors.primary,
     textAlign: 'center',
-    marginBottom: hp('0.6%'),
+    marginBottom: hp('0.5%'),
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -281,12 +286,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: hp('2.4%'),
-    marginBottom: hp('2.5%'),
+    lineHeight: fs(20),
+    marginBottom: hp(isCompactScreen ? '1.4%' : '2.2%'),
     paddingHorizontal: wp('2%'),
   },
   fieldWrap: {
-    marginBottom: hp('1.4%'),
+    marginBottom: hp(isCompactScreen ? '1%' : '1.4%'),
   },
   fieldLabel: {
     fontSize: fs(12),
@@ -321,8 +326,8 @@ const styles = StyleSheet.create({
     borderColor: '#F0D0D8',
     borderRadius: wp('3%'),
     padding: wp('3.5%'),
-    marginBottom: hp('2%'),
-    marginTop: hp('0.5%'),
+    marginBottom: hp(isCompactScreen ? '1.4%' : '2%'),
+    marginTop: hp('0.4%'),
   },
   securityNoteText: {
     flex: 1,
@@ -330,11 +335,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     fontStyle: 'italic',
     color: Colors.primary,
-    lineHeight: hp('2%'),
+    lineHeight: fs(16),
   },
   forgotWrap: {
     alignItems: 'center',
-    marginTop: hp('1.5%'),
+    marginTop: hp('1.4%'),
   },
   forgotText: {
     fontSize: fs(14),

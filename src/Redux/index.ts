@@ -30,10 +30,12 @@ export {
   setProfile,
   setAccountStatus,
   setSetupComplete,
+  setAdminReactivateRequested,
   clearProfile,
   selectProfile,
   selectAccountStatus,
   selectIsAccountInactive,
+  selectAdminReactivateRequested,
   selectProfilePhoto,
   selectSetupComplete,
 } from './slices/profileSlice';

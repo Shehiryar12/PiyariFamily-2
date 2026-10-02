@@ -134,7 +134,7 @@ const ProfileDetailScreen = () => {
 
   const handleSendPhotoRequest = async () => {
     if (isAccountInactive) {
-      Toast.show(Strings.inactiveReactivateHint, Toast.LONG);
+      Toast.show(Strings.inactiveAdminHint, Toast.LONG);
       return;
     }
 

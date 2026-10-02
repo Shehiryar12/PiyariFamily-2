@@ -7,12 +7,14 @@ export type ProfileState = {
   profile: ProfileApiData | null;
   accountStatus: AccountStatus | null;
   setupComplete: boolean;
+  adminReactivateRequested: boolean;
 };
 
 const initialState: ProfileState = {
   profile: null,
   accountStatus: null,
   setupComplete: false,
+  adminReactivateRequested: false,
 };
 
 const profileSlice = createSlice({
@@ -24,16 +26,27 @@ const profileSlice = createSlice({
     },
     setAccountStatus: (state, action: PayloadAction<AccountStatus | null>) => {
       state.accountStatus = action.payload;
+      if (action.payload === 'active') {
+        state.adminReactivateRequested = false;
+      }
     },
     setSetupComplete: (state, action: PayloadAction<boolean>) => {
       state.setupComplete = action.payload;
+    },
+    setAdminReactivateRequested: (state, action: PayloadAction<boolean>) => {
+      state.adminReactivateRequested = action.payload;
     },
     clearProfile: () => initialState,
   },
 });
 
-export const { setProfile, setAccountStatus, setSetupComplete, clearProfile } =
-  profileSlice.actions;
+export const {
+  setProfile,
+  setAccountStatus,
+  setSetupComplete,
+  setAdminReactivateRequested,
+  clearProfile,
+} = profileSlice.actions;
 
 export const selectProfile = (state: { profile: ProfileState }) =>
   state.profile.profile;
@@ -46,6 +59,10 @@ export const selectIsAccountInactive = (state: { profile: ProfileState }) =>
 
 export const selectProfilePhoto = (state: { profile: ProfileState }) =>
   pickImageUrl(state.profile.profile) || null;
+
+export const selectAdminReactivateRequested = (state: {
+  profile: ProfileState;
+}) => Boolean(state.profile.adminReactivateRequested);
 
 export const selectSetupComplete = (state: { profile: ProfileState }) =>
   Boolean(state.profile.setupComplete);

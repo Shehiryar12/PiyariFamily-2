@@ -522,7 +522,30 @@ const mapGetProfileFields = (
 
   const accountStatus = pick('status', 'account_status', 'accountStatus');
   if (typeof accountStatus === 'string') {
-    profile.status = accountStatus.toLowerCase();
+    const normalized = accountStatus.toLowerCase();
+    if (normalized === 'active' || normalized === 'activated') {
+      profile.status = 'active';
+    }
+    if (
+      normalized === 'inactive' ||
+      normalized === 'deactivated' ||
+      normalized === 'disabled'
+    ) {
+      profile.status = 'inactive';
+    }
+  } else if (accountStatus === 1 || accountStatus === true) {
+    profile.status = 'active';
+  } else if (accountStatus === 0 || accountStatus === false) {
+    profile.status = 'inactive';
+  }
+
+  const deactivated = parseVisibilityFlag(
+    pick('is_deactivated', 'deactivated', 'isDeactivated'),
+  );
+  if (deactivated === true) {
+    profile.status = 'inactive';
+  } else if (deactivated === false) {
+    profile.status = 'active';
   }
 
   const phoneVerified = parseVisibilityFlag(

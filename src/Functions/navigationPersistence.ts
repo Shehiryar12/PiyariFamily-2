@@ -79,6 +79,10 @@ export const resolveSessionNavigationState = ():
     return stackState('Login');
   }
 
+  if (profile.accountStatus === 'inactive') {
+    return stackState('AccountDeactivated');
+  }
+
   if (profileComplete || isMainAppRoute(routeName)) {
     if (saved && isMainAppRoute(routeName)) {
       return saved;

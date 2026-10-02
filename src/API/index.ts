@@ -1,4 +1,6 @@
 export { Api } from './Api';
+export { refreshAccountStatus, pickRemoteAccountStatus } from './refreshAccountStatus';
+export type { AccountRefreshResult } from './refreshAccountStatus';
 export { hydrateMatchImages, getImageCacheKey, isRemoteImage } from './hydrateMatchImages';
 export { apiClient, axiosInstance } from './apiClient';
 export { API_CONFIG } from './config';

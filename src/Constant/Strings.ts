@@ -453,11 +453,16 @@ export const Strings = {
   accountOptionsSubtitle: 'Before you go, please review your options below.',
   deactivateAccountTitle: 'Deactivate Account',
   deactivateAccountDesc:
-    'Temporarily hide your profile. You can reactivate anytime by logging back in.',
+    'You will not be able to use the app until an admin approves your reactivation request.',
   deactivateAction: 'Deactivate',
+  confirmReactivateTitle: 'Confirm request',
+  confirmReactivateDesc:
+    'Enter your email and password to send a reactivation request to admin.',
   deleteAccountTitle: 'Delete Account',
   deleteAccountDesc:
     'Permanently delete your account and all data. This action cannot be undone.',
+  deleteAccountConfirmMessage:
+    'Are you sure you want to permanently delete your account? This cannot be undone.',
   deleteAction: 'Delete',
   whatYouLoseTitle: "What you'll lose on deletion:",
   loseProfilePhotos: 'Your profile and photos',
@@ -469,15 +474,20 @@ export const Strings = {
   contactSupportBeforeLeaving: 'Contact Support Before Leaving',
   changedMindGoBack: 'Changed your mind? Go Back →',
   accountDeactivatedTitle: 'Account Deactivated',
+  accountDeactivatedSubtitle: 'Access paused',
   accountDeactivatedDesc:
-    'Your profile is hidden from others. Reactivate anytime to see matches again.',
-  accountDeactivatedSubtitle: 'You are taking a break',
-  inactiveHiddenFromOthers: 'Hidden from other users',
-  inactiveMatchesPaused: 'Matches are paused for now',
-  inactiveDataSafe: 'Your data is safe and preserved',
-  inactiveReactivateHint:
-    'Reactivate your account anytime to continue finding your match.',
-  reactivateAccount: 'Reactivate Account',
+    'Your account has been deactivated. You cannot use the app until an admin approves your request.',
+  inactiveCannotUseApp: 'You cannot browse, chat, or use any app features right now',
+  inactiveSendAdminRequest: 'Send a request to admin to restore your access',
+  inactiveWaitForApproval: 'Once admin approves, you will be able to use the app again',
+  inactiveAdminHint:
+    'Only an admin can reactivate your account. Sending a request does not restore access instantly.',
+  requestAdminAccess: 'Send request to admin',
+  goToLogin: 'Go to login',
+  adminRequestSentTitle: 'Request sent',
+  adminRequestSentDesc:
+    'Your request has been sent to admin. You can use the app again after they approve it.',
+  adminRequestAlreadySent: 'Request already sent. Please wait for admin approval.',
 
   editProfileTitle: 'Edit Profile',
   save: 'Save',

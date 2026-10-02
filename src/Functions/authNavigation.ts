@@ -1,9 +1,6 @@
-import {
-  CommonActions,
-  NavigationProp,
-  ParamListBase,
-} from '@react-navigation/native';
+import { NavigationProp, ParamListBase } from '@react-navigation/native';
 import { Api, pickImageUrl, saveProfileCache, type ProfileApiData } from '../API';
+import { resetRootTo } from '../Navigation/navigationRef';
 import { clearNavigationState, clearSession, setHasSeenWelcome, setSetupComplete, store } from '../Redux';
 import { resolveSessionNavigationState } from './navigationPersistence';
 
@@ -19,7 +16,7 @@ export const PROFILE_SETUP_FLOW = [
 ] as const;
 
 export type ProfileSetupRoute = (typeof PROFILE_SETUP_FLOW)[number];
-export type PostLoginRoute = 'Main' | ProfileSetupRoute;
+export type PostLoginRoute = 'Main' | 'AccountDeactivated' | ProfileSetupRoute;
 
 const isTruthyFlag = (value: unknown) =>
   value === true || value === 1 || value === '1' || value === 'true';
@@ -87,10 +84,10 @@ export const getPostLoginRoute = (
     : getNextSetupRoute(profile?.profile_step);
 
 export const getSetupNavigationState = (route: PostLoginRoute) => {
-  if (route === 'Main') {
+  if (route === 'Main' || route === 'AccountDeactivated') {
     return {
       index: 0,
-      routes: [{ name: 'Main' as const }],
+      routes: [{ name: route }],
     };
   }
 
@@ -122,6 +119,10 @@ export const resolvePostLoginRoute = async (): Promise<PostLoginRoute> => {
 
   if (route === 'Main') {
     store.dispatch(setSetupComplete(true));
+  }
+
+  if (store.getState().profile.accountStatus === 'inactive') {
+    return 'AccountDeactivated';
   }
 
   return route;
@@ -201,6 +202,10 @@ export const finishLoginNavigation = async (
   navigation: AuthNavigation,
   response?: LoginNavResponse,
 ) => {
+  if (store.getState().profile.accountStatus === 'inactive') {
+    navigateAfterLogin(navigation, 'AccountDeactivated');
+    return;
+  }
   const flag = pickProfileCompletionFlag(response);
   const completed = pickProfileCompleted(response);
   const step = pickProfileStep(response);
@@ -234,25 +239,30 @@ export const navigateAfterLogin = (
   navigation.replace(route);
 };
 
-export const resetToLogin = (
-  navigation: NavigationProp<ParamListBase>,
+export const resetToLogin = async (
+  _navigation?: NavigationProp<ParamListBase>,
   options?: { forgetAccount?: boolean },
 ) => {
   store.dispatch(setHasSeenWelcome(true));
   store.dispatch(clearNavigationState());
-  void clearSession({
+  await clearSession({
     rememberAccount: options?.forgetAccount === false,
   });
 
-  const loginReset = {
-    index: 0,
-    routes: [{ name: 'Login' }],
-  };
+  resetRootTo('Login');
+};
 
-  let rootNavigation: NavigationProp<ParamListBase> = navigation;
-  while (rootNavigation.getParent()) {
-    rootNavigation = rootNavigation.getParent() as NavigationProp<ParamListBase>;
-  }
+export const leaveDeactivatedForLogin = () =>
+  resetToLogin(undefined, { forgetAccount: false });
 
-  rootNavigation.dispatch(CommonActions.reset(loginReset));
+export const resetToAccountDeactivated = (
+  _navigation?: NavigationProp<ParamListBase>,
+) => {
+  store.dispatch(clearNavigationState());
+  resetRootTo('AccountDeactivated');
+};
+
+export const resetToMain = (_navigation?: NavigationProp<ParamListBase>) => {
+  store.dispatch(clearNavigationState());
+  resetRootTo('Main');
 };

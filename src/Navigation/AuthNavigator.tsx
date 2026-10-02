@@ -25,7 +25,9 @@ import {
   SelectCountryScreen,
 } from '../Screens/ProfileSetup';
 import { getActiveRouteName } from '../Functions/navigationPersistence';
+import { AccountDeactivatedScreen } from '../Screens/Profile';
 import { setNavigationState, store } from '../Redux';
+import { navigationRef } from './navigationRef';
 import MainTabNavigator from './MainTabNavigator';
 
 export type AuthStackParamList = {
@@ -54,6 +56,7 @@ export type AuthStackParamList = {
   FaithCommunity: undefined;
   AddPhotos: undefined;
   ProfileReady: undefined;
+  AccountDeactivated: undefined;
   Main: undefined;
 };
 
@@ -62,6 +65,7 @@ const Stack = createNativeStackNavigator<AuthStackParamList>();
 const AuthNavigator = () => {
   return (
     <NavigationContainer
+      ref={navigationRef}
       onStateChange={state => {
         if (getActiveRouteName(state) === 'Splash') {
           return;
@@ -110,6 +114,16 @@ const AuthNavigator = () => {
         <Stack.Screen name="FaithCommunity" component={FaithCommunityScreen} />
         <Stack.Screen name="AddPhotos" component={AddPhotosScreen} />
         <Stack.Screen name="ProfileReady" component={ProfileReadyScreen} />
+        <Stack.Screen
+          name="AccountDeactivated"
+          component={AccountDeactivatedScreen}
+          options={{
+            gestureEnabled: false,
+            fullScreenGestureEnabled: false,
+            animation: 'none',
+            presentation: 'fullScreenModal',
+          }}
+        />
         <Stack.Screen
           name="Main"
           component={MainTabNavigator}

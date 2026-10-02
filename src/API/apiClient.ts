@@ -113,6 +113,7 @@ const logReduxOnApiError = () => {
 
 axiosInstance.interceptors.response.use(
   response => {
+    console.log('API Success:', response);
     console.log('API Success:', {
       method: response.config.method?.toUpperCase(),
       url: response.config.url,
@@ -122,6 +123,7 @@ axiosInstance.interceptors.response.use(
     });
     return response;
   },
+   
   (error: AxiosError<ApiErrorResponse>) => {
     if (
       error.response?.status === 429 &&

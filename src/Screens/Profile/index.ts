@@ -9,5 +9,6 @@ export { default as RequestHistoryScreen } from './RequestHistoryScreen';
 export { default as ViewProfileGalleryScreen } from './ViewProfileGalleryScreen';
 export { default as ChangePasswordScreen } from './ChangePasswordScreen';
 export { default as AccountOptionsScreen } from './AccountOptionsScreen';
+export { default as AccountDeactivatedScreen } from './AccountDeactivatedScreen';
 export { default as ReferralProgramScreen } from './ReferralProgramScreen';
 export { default as MyRewardsScreen } from './MyRewardsScreen';

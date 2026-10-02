@@ -16,6 +16,7 @@ import {
 } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
+import ConfirmModal from '../../Components/ConfirmModal';
 import ScreenHeader from '../../Components/ScreenHeader';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
@@ -26,7 +27,7 @@ import {
   isApiSuccess,
 } from '../../API';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
-import { resetToLogin } from '../../Functions/authNavigation';
+import { resetToAccountDeactivated, resetToLogin } from '../../Functions/authNavigation';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { fs, hp, wp } from '../../Functions/responsive';
 import {
@@ -34,6 +35,7 @@ import {
   clearReferral,
   clearSession,
   clearShortlist,
+  persistor,
   setAccountStatus,
   useAppDispatch,
 } from '../../Redux';
@@ -56,6 +58,7 @@ const AccountOptionsScreen = () => {
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const goToLogin = () => {
     resetToLogin(navigation, { forgetAccount: true });
@@ -64,61 +67,59 @@ const AccountOptionsScreen = () => {
   const handleDeactivate = async () => {
     if (loading) {
       return;
-    } else {
-      setLoading(true);
+    }
 
-      try {
+    setLoading(true);
 
-        const res = await Api.updateAccountStatus('deactivate');
+    try {
+      const res = await Api.updateAccountStatus('deactivate');
 
-
-        if (res?.isSuccess || res?.status == 200 || res?.success == 200) {
-          dispatch(setAccountStatus(res?.accountStatus ?? 'inactive'));
-          dispatch(clearHomeMatches());
-          dispatch(clearShortlist());
-          dispatch(clearReferral());
-          Toast.show(res?.message || 'Account deactivated', Toast.LONG);
-          navigation.getParent()?.navigate('Home');
-        } else {
-          Toast.show(res?.message || 'Failed to deactivate account', Toast.LONG);
-        }
-      } catch (error: any) {
-        Toast.show(
-          error?.response?.data?.message || 'Failed to deactivate account',
-          Toast.LONG,
-        );
-      } finally {
-        setLoading(false);
+      if (res?.isSuccess || res?.status == 200 || res?.success == 200) {
+        dispatch(setAccountStatus('inactive'));
+        dispatch(clearHomeMatches());
+        dispatch(clearShortlist());
+        dispatch(clearReferral());
+        await persistor.flush();
+        Toast.show(res?.message || 'Account deactivated', Toast.LONG);
+        resetToAccountDeactivated();
+      } else {
+        Toast.show(res?.message || 'Failed to deactivate account', Toast.LONG);
       }
+    } catch (error: any) {
+      Toast.show(
+        error?.response?.data?.message || 'Failed to deactivate account',
+        Toast.LONG,
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDelete = async () => {
     if (loading || deleting) {
       return;
-    } else {
-      setDeleting(true);
+    }
 
-      try {
+    setDeleting(true);
 
-        const res = await Api.deleteAccount();
+    try {
+      const res = await Api.deleteAccount();
 
-
-        if (isApiSuccess(res?.status, res?.success)) {
-          await clearSession({ rememberAccount: false });
-          Toast.show(res?.message || 'Account deleted successfully', Toast.LONG);
-          goToLogin();
-        } else {
-          Toast.show(res?.message || 'Failed to delete account', Toast.LONG);
-        }
-      } catch (error: any) {
-        Toast.show(
-          error?.response?.data?.message || 'Failed to delete account',
-          Toast.LONG,
-        );
-      } finally {
-        setDeleting(false);
+      if (isApiSuccess(res?.status, res?.success)) {
+        setShowDeleteModal(false);
+        await clearSession({ rememberAccount: false });
+        Toast.show(res?.message || 'Account deleted successfully', Toast.LONG);
+        goToLogin();
+      } else {
+        Toast.show(res?.message || 'Failed to delete account', Toast.LONG);
       }
+    } catch (error: any) {
+      Toast.show(
+        error?.response?.data?.message || 'Failed to delete account',
+        Toast.LONG,
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -189,7 +190,7 @@ const AccountOptionsScreen = () => {
           <TouchableOpacity
             style={styles.deleteBtn}
             activeOpacity={0.85}
-            onPress={handleDelete}
+            onPress={() => setShowDeleteModal(true)}
             disabled={loading || deleting}
           >
             {deleting ? (
@@ -245,6 +246,22 @@ const AccountOptionsScreen = () => {
           <Text style={styles.goBackText}>{Strings.changedMindGoBack}</Text>
         </TouchableOpacity>
       </View>
+
+      <ConfirmModal
+        visible={showDeleteModal}
+        title={Strings.deleteAccountTitle}
+        message={Strings.deleteAccountConfirmMessage}
+        cancelLabel={Strings.no}
+        confirmLabel={Strings.yes}
+        loading={deleting}
+        iconName="delete-outline"
+        onClose={() => {
+          if (!deleting) {
+            setShowDeleteModal(false);
+          }
+        }}
+        onConfirm={handleDelete}
+      />
     </SafeAreaView>
   );
 };

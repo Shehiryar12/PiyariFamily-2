@@ -538,10 +538,23 @@ export const Api = {
   getSubscriptions: () =>
     apiClient.get<SubscriptionsResponse>(ENDPOINTS.SUBSCRIPTIONS),
 
-  updateAccountStatus: async (action: 'deactivate' | 'activate') => {
+  updateAccountStatus: async (
+    action: 'deactivate' | 'activate',
+    credentials?: { email: string; password: string },
+  ) => {
+    const payload: Record<string, string> = { action };
+
+    if (credentials?.email) {
+      payload.email = credentials.email.trim();
+    }
+
+    if (credentials?.password) {
+      payload.password = credentials.password;
+    }
+
     const { status, data } = await apiClient.postForm<AccountStatusResponse>(
       ENDPOINTS.ACCOUNT_DEACTIVATE,
-      { action },
+      payload,
     );
 
     const accountStatus = resolveUpdatedAccountStatus(data, action);

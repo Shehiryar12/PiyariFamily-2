@@ -32,6 +32,7 @@ import { pickDisplayFirstName } from '../../Functions/welcomeGreeting';
 import { hp, wp } from '../../Functions/responsive';
 import {
   useAppSelector,
+  selectLastAccountEmail,
   selectLastAccountName,
   selectProfile,
   selectUser,
@@ -70,6 +71,7 @@ const isLoginSuccess = (
 const LoginScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const lastAccountName = useAppSelector(selectLastAccountName);
+  const lastAccountEmail = useAppSelector(selectLastAccountEmail);
   const user = useAppSelector(selectUser);
   const profile = useAppSelector(selectProfile);
   const welcomeName = pickDisplayFirstName(
@@ -77,7 +79,7 @@ const LoginScreen = ({ navigation }: Props) => {
     profile?.name,
     user?.name,
   );
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(lastAccountEmail ?? '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 

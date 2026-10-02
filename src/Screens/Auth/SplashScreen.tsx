@@ -5,8 +5,13 @@ import { Images } from '../../Assets';
 import { AuthStyles } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
 import { hp } from '../../Functions/responsive';
-import { isProfileSetupComplete } from '../../Functions/authNavigation';
+import {
+  isProfileSetupComplete,
+  leaveDeactivatedForLogin,
+  resetToAccountDeactivated,
+} from '../../Functions/authNavigation';
 import { clearSession, store, waitForPersistor } from '../../Redux';
+import { refreshAccountStatus } from '../../API';
 
 type Props = {
   navigation: {
@@ -30,6 +35,13 @@ const SplashScreen = ({ navigation }: Props) => {
         return;
       }
 
+      const hasToken = Boolean(store.getState().auth.accessToken);
+      const wasInactive =
+        store.getState().profile.accountStatus === 'inactive';
+      const statusPromise = hasToken
+        ? refreshAccountStatus().catch(() => store.getState().profile.accountStatus)
+        : Promise.resolve(null);
+
       await new Promise<void>(resolve => {
         delayTimer = setTimeout(resolve, 3500);
       });
@@ -38,11 +50,34 @@ const SplashScreen = ({ navigation }: Props) => {
         return;
       }
 
-      const { auth, profile, app } = store.getState();
-      const hasToken = Boolean(auth.accessToken);
-      const setupComplete = isProfileSetupComplete(profile.profile);
+      const remoteStatus = await statusPromise;
 
-      if (hasToken && setupComplete) {
+      if (cancelled) {
+        return;
+      }
+
+      if (
+        remoteStatus === 'unauthenticated' ||
+        (wasInactive && remoteStatus === 'active')
+      ) {
+        await leaveDeactivatedForLogin();
+        return;
+      }
+
+      const { auth, profile, app } = store.getState();
+      const setupComplete = isProfileSetupComplete(profile.profile);
+      const stillLoggedIn = Boolean(auth.accessToken);
+      const isInactive =
+        wasInactive ||
+        remoteStatus === 'inactive' ||
+        profile.accountStatus === 'inactive';
+
+      if (stillLoggedIn && isInactive) {
+        resetToAccountDeactivated();
+        return;
+      }
+
+      if (stillLoggedIn && setupComplete) {
         navigation.reset({
           index: 0,
           routes: [{ name: 'Main' }],
@@ -50,7 +85,7 @@ const SplashScreen = ({ navigation }: Props) => {
         return;
       }
 
-      if (hasToken && !setupComplete) {
+      if (stillLoggedIn && !setupComplete) {
         await clearSession({ rememberAccount: true });
       }
 
