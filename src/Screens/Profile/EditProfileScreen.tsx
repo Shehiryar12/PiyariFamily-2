@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Calendar, type DateData } from 'react-native-calendars';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -79,6 +81,119 @@ type NavigationProp = NativeStackNavigationProp<
 
 
 const ABOUT_MAX_LENGTH = 300;
+const MIN_AGE = 18;
+const MAX_AGE = 100;
+
+const startOfDay = (date: Date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const addYears = (date: Date, years: number) => {
+  const next = new Date(date);
+  next.setFullYear(next.getFullYear() + years);
+  return startOfDay(next);
+};
+
+const getToday = () => startOfDay(new Date());
+const getMaxDob = () => addYears(getToday(), -MIN_AGE);
+const getMinDob = () => addYears(getToday(), -MAX_AGE);
+
+const createValidDate = (
+  year: number,
+  monthIndex: number,
+  day: number,
+): Date | null => {
+  const date = startOfDay(new Date(year, monthIndex, day));
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== monthIndex ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+};
+
+const toLocalIsoDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateOfBirth = (value: string): Date | null => {
+  const cleaned = value.trim();
+  const iso = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return createValidDate(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  }
+
+  const slash = cleaned.replace(/\s/g, '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (slash) {
+    return createValidDate(
+      Number(slash[3]),
+      Number(slash[2]) - 1,
+      Number(slash[1]),
+    );
+  }
+
+  const parsed = new Date(cleaned);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return startOfDay(parsed);
+};
+
+const formatDateDisplay = (date: Date): string =>
+  date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+const calculateAgeFromDate = (date: Date): number => {
+  const today = getToday();
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    age -= 1;
+  }
+
+  return age;
+};
+
+const clampCalendarMonth = (date: Date) => {
+  const min = getMinDob();
+  const max = getMaxDob();
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+  const minMonth = new Date(min.getFullYear(), min.getMonth(), 1);
+  const maxMonth = new Date(max.getFullYear(), max.getMonth(), 1);
+
+  if (monthStart < minMonth) {
+    return min;
+  }
+  if (monthStart > maxMonth) {
+    return max;
+  }
+  return monthStart;
+};
+
+const getDefaultPickerDate = () => {
+  const preferred = addYears(getToday(), -25);
+  const min = getMinDob();
+  const max = getMaxDob();
+  if (preferred > max) {
+    return max;
+  }
+  if (preferred < min) {
+    return min;
+  }
+  return preferred;
+};
 
 const EMPTY_FORM: EditProfileFormData = {
   fullName: '',
@@ -177,6 +292,10 @@ const EditProfileScreen = () => {
   const [deletingPhoto, setDeletingPhoto] = useState(false);
   const [showAllAdditional, setShowAllAdditional] = useState(false);
   const [galleryGridWidth, setGalleryGridWidth] = useState(0);
+  const [dobPickerOpen, setDobPickerOpen] = useState(false);
+  const [calendarCursor, setCalendarCursor] = useState(
+    toLocalIsoDate(getDefaultPickerDate()),
+  );
   const languagesAnchorRef = useRef<View>(null);
   const handleLanguagesPress = useGuardedDropdownPress(() =>
     setOpenDropdown(prev => (prev === 'languages' ? null : 'languages')),
@@ -233,10 +352,59 @@ const EditProfileScreen = () => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
+  const minDobIso = toLocalIsoDate(getMinDob());
+  const maxDobIso = toLocalIsoDate(getMaxDob());
+  const parsedBirthday = form.birthday
+    ? parseDateOfBirth(form.birthday)
+    : null;
+  const selectedDobIso = parsedBirthday ? toLocalIsoDate(parsedBirthday) : '';
+
+  const openDobCalendar = () => {
+    Keyboard.dismiss();
+    setOpenDropdown(null);
+    const parsed = form.birthday ? parseDateOfBirth(form.birthday) : null;
+    const visibleDate = parsed ?? getDefaultPickerDate();
+    setCalendarCursor(toLocalIsoDate(clampCalendarMonth(visibleDate)));
+    setDobPickerOpen(true);
+  };
+
+  const shiftCalendarYear = (delta: number) => {
+    const [year, month] = calendarCursor.split('-').map(Number);
+    const next = clampCalendarMonth(new Date(year + delta, month - 1, 1));
+    setCalendarCursor(toLocalIsoDate(next));
+  };
+
+  const onSelectCalendarDay = (day: DateData) => {
+    const selected = createValidDate(day.year, day.month - 1, day.day);
+    if (!selected) {
+      Toast.show('Please select a valid date of birth');
+      return;
+    }
+
+    if (selected > getMaxDob()) {
+      Toast.show('You must be at least 18 years old.');
+      return;
+    }
+    if (selected < getMinDob()) {
+      Toast.show('Please select a valid date of birth');
+      return;
+    }
+
+    const birthday = toLocalIsoDate(selected);
+    setForm(prev => ({
+      ...prev,
+      birthday,
+      dateOfBirth: formatDateDisplay(selected),
+      age: calculateAgeFromDate(selected),
+    }));
+    setDobPickerOpen(false);
+  };
+
   const applyProfile = (profile: Parameters<typeof mapProfileToForm>[0]) => {
     const mapped = mapProfileToForm(profile);
     setForm(prev => ({
       ...mapped,
+      aboutMe: (mapped.aboutMe ?? '').slice(0, ABOUT_MAX_LENGTH),
       profilePhoto: newPhotoRef.current
         ? prev.profilePhoto
         : galleryDirtyRef.current
@@ -945,20 +1113,31 @@ const EditProfileScreen = () => {
           </View>
 
           {renderFieldLabel(Strings.dateOfBirthLabel)}
-          <View style={styles.inputRow}>
+          <TouchableOpacity
+            style={styles.inputRow}
+            activeOpacity={0.85}
+            onPress={openDobCalendar}
+          >
             <Icon
               name="calendar-outline"
               size={fs(20)}
               color={Colors.primary}
               style={styles.inputIcon}
             />
-            <Text style={styles.inputText}>{form.dateOfBirth || '-'}</Text>
+            <Text
+              style={[
+                styles.inputText,
+                !form.dateOfBirth && styles.dobPlaceholder,
+              ]}
+            >
+              {form.dateOfBirth || Strings.dateOfBirthPlaceholder}
+            </Text>
             {form.age != null ? (
               <View style={styles.ageBadge}>
                 <Text style={styles.ageBadgeText}>Age: {form.age}</Text>
               </View>
             ) : null}
-          </View>
+          </TouchableOpacity>
 
           {renderFieldLabel(Strings.genderLabel)}
           <View style={styles.genderRow}>
@@ -1020,6 +1199,7 @@ const EditProfileScreen = () => {
               placeholder={Strings.aboutMePlaceholder}
               placeholderTextColor={Colors.placeholder}
               multiline
+              maxLength={ABOUT_MAX_LENGTH}
               textAlignVertical="top"
             />
           </View>
@@ -1040,6 +1220,7 @@ const EditProfileScreen = () => {
               onChangeText={value => updateForm('email', value)}
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={false}
               autoCorrect={false}
               placeholderTextColor={Colors.placeholder}
             />
@@ -1306,6 +1487,99 @@ const EditProfileScreen = () => {
         </View>
       </KeyboardAvoidingView>
       )}
+
+      <Modal
+        visible={dobPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDobPickerOpen(false)}
+      >
+        <View style={styles.calendarBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setDobPickerOpen(false)}
+          />
+          <View style={styles.calendarCard}>
+            <View style={styles.calendarHeader}>
+              <Text style={styles.calendarTitle}>
+                {Strings.dateOfBirthLabel}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setDobPickerOpen(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="close" size={fs(22)} color={Colors.iconMuted} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.calendarYearRow}>
+              <TouchableOpacity
+                style={styles.yearShiftBtn}
+                onPress={() => shiftCalendarYear(-1)}
+              >
+                <Icon
+                  name="chevron-double-left"
+                  size={fs(22)}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+              <Text style={styles.calendarHint}>
+                Jump year to pick your birth date
+              </Text>
+              <TouchableOpacity
+                style={styles.yearShiftBtn}
+                onPress={() => shiftCalendarYear(1)}
+              >
+                <Icon
+                  name="chevron-double-right"
+                  size={fs(22)}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
+            <Calendar
+              key={calendarCursor.slice(0, 7)}
+              current={calendarCursor}
+              minDate={minDobIso}
+              maxDate={maxDobIso}
+              onDayPress={onSelectCalendarDay}
+              onMonthChange={month => {
+                const next = createValidDate(month.year, month.month - 1, 1);
+                if (next) {
+                  setCalendarCursor(toLocalIsoDate(clampCalendarMonth(next)));
+                }
+              }}
+              enableSwipeMonths
+              markedDates={
+                selectedDobIso
+                  ? {
+                      [selectedDobIso]: {
+                        selected: true,
+                        selectedColor: Colors.primary,
+                        selectedTextColor: Colors.white,
+                      },
+                    }
+                  : undefined
+              }
+              theme={{
+                backgroundColor: Colors.white,
+                calendarBackground: Colors.white,
+                selectedDayBackgroundColor: Colors.primary,
+                selectedDayTextColor: Colors.white,
+                todayTextColor: Colors.gold,
+                dayTextColor: Colors.label,
+                textDisabledColor: Colors.placeholder,
+                arrowColor: Colors.primary,
+                monthTextColor: Colors.primary,
+                textMonthFontFamily: Fonts.bold,
+                textDayFontFamily: Fonts.regular,
+                textDayHeaderFontFamily: Fonts.medium,
+                textMonthFontSize: FontSizes.body,
+                textDayFontSize: FontSizes.body,
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={viewerIndex !== null}
@@ -1656,6 +1930,56 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.body,
     fontFamily: Fonts.regular,
     color: Colors.text,
+  },
+  dobPlaceholder: {
+    color: Colors.placeholder,
+  },
+  calendarBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: wp('5%'),
+  },
+  calendarCard: {
+    backgroundColor: Colors.white,
+    borderRadius: wp('4%'),
+    paddingHorizontal: wp('2%'),
+    paddingTop: hp('1.6%'),
+    paddingBottom: hp('1.2%'),
+    width: '100%',
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('2%'),
+    marginBottom: hp('0.8%'),
+  },
+  calendarTitle: {
+    fontSize: FontSizes.body,
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+  },
+  calendarYearRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp('1%'),
+    marginBottom: hp('0.6%'),
+  },
+  yearShiftBtn: {
+    width: wp('10%'),
+    height: wp('10%'),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarHint: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: fs(11),
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
   },
   ageBadge: {
     backgroundColor: '#FFF3E0',
