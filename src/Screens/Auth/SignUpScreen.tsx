@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
-  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import KeyboardScrollView from '../../Components/KeyboardScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-simple-toast';
 import { Images } from '../../Assets';
@@ -14,6 +14,8 @@ import AuthBackground from '../../Components/AuthBackground';
 import AuthFooter from '../../Components/AuthFooter';
 import AuthInput from '../../Components/AuthInput';
 import BackButton from '../../Components/BackButton';
+import PasswordRequirements from '../../Components/PasswordRequirements';
+import PasswordStrengthMeter from '../../Components/PasswordStrengthMeter';
 import PrimaryButton from '../../Components/PrimaryButton';
 import TermsCheckbox from '../../Components/TermsCheckbox';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
@@ -26,6 +28,7 @@ import {
   isApiSuccess,
 } from '../../API';
 import { hp, wp } from '../../Functions/responsive';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 
 type Props = {
   navigation: {
@@ -53,6 +56,12 @@ type Props = {
     ) => void;
   };
 };
+
+const isPasswordValid = (password: string) =>
+  password.length >= 8 &&
+  /[A-Z]/.test(password) &&
+  /[0-9]/.test(password) &&
+  /[^A-Za-z0-9]/.test(password);
 
 const SignUpScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
@@ -86,6 +95,10 @@ const SignUpScreen = ({ navigation }: Props) => {
     }
     if (password !== confirmPassword) {
       Toast.show('Passwords do not match');
+      return;
+    }
+    if (!isPasswordValid(password)) {
+      Toast.show('Please meet all password requirements');
       return;
     }
     if (!agreed) {
@@ -127,91 +140,103 @@ const SignUpScreen = ({ navigation }: Props) => {
 
   return (
     <AuthBackground>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.root}>
-          <KeyboardScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[
-              styles.scroll,
-              { paddingBottom: Math.max(insets.bottom + hp('2%'), hp('4%')) },
-            ]}
-          >
-            <BackButton onPress={handleBack} />
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator
+          nestedScrollEnabled
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          ]}
+        >
+          <BackButton onPress={handleBack} />
 
-            <View style={styles.formSection}>
-              <Text style={styles.title}>{Strings.createYourAccount}</Text>
-              <Text style={styles.subtitle}>{Strings.signUpSubtitle}</Text>
+          <View style={styles.formSection}>
+            <Text style={styles.title}>{Strings.createYourAccount}</Text>
+            <Text style={styles.subtitle}>{Strings.signUpSubtitle}</Text>
 
-              <AuthInput
-                label={Strings.fullNameLabel}
-                iconName="account-outline"
-                placeholder={Strings.fullNamePlaceholder}
-                value={fullName}
-                onChangeText={setFullName}
-                autoCapitalize="words"
-              />
-
-              <AuthInput
-                label={Strings.emailLabel}
-                iconName="email-outline"
-                placeholder={Strings.signUpEmailPlaceholder}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-
-              <AuthInput
-                label={Strings.phoneNumberLabel}
-                iconName="phone-outline"
-                placeholder={Strings.phoneNumberPlaceholder}
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
-              />
-
-              <AuthInput
-                label={Strings.passwordLabel}
-                iconName="lock-outline"
-                placeholder={Strings.createPasswordPlaceholder}
-                value={password}
-                onChangeText={setPassword}
-                showToggle
-                secureTextEntry
-              />
-
-              <AuthInput
-                label={Strings.confirmPasswordLabel}
-                iconSource={Images.confirmPasswordIcon}
-                placeholder={Strings.confirmPasswordPlaceholder}
-                value={confirmPassword}
-                showToggle
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-              />
-
-              <TermsCheckbox checked={agreed} onToggle={setAgreed} />
-
-              <PrimaryButton
-                title={Strings.createAccount}
-                onPress={handleSignUp}
-                loading={loading}
-                style={styles.submitButton}
-              />
-            </View>
-
-            <AuthFooter
-              prefix={Strings.alreadyHaveAccount}
-              linkText={Strings.logInLink}
-              onPress={() => navigation.navigate('Login')}
-              style={styles.footer}
+            <AuthInput
+              label={Strings.fullNameLabel}
+              iconName="account-outline"
+              placeholder={Strings.fullNamePlaceholder}
+              value={fullName}
+              onChangeText={setFullName}
+              autoCapitalize="words"
             />
 
-            <View style={styles.bottomSpacer} />
-          </KeyboardScrollView>
-        </View>
-      </TouchableWithoutFeedback>
+            <AuthInput
+              label={Strings.emailLabel}
+              iconName="email-outline"
+              placeholder={Strings.signUpEmailPlaceholder}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <AuthInput
+              label={Strings.phoneNumberLabel}
+              iconName="phone-outline"
+              placeholder={Strings.phoneNumberPlaceholder}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+            />
+
+            <AuthInput
+              label={Strings.passwordLabel}
+              iconName="lock-outline"
+              placeholder={Strings.createPasswordPlaceholder}
+              value={password}
+              onChangeText={setPassword}
+              showToggle
+              secureTextEntry
+              autoCorrect={false}
+              autoCapitalize="none"
+              textContentType="password"
+            />
+
+            <AuthInput
+              label={Strings.confirmPasswordLabel}
+              iconSource={Images.confirmPasswordIcon}
+              placeholder={Strings.confirmPasswordPlaceholder}
+              value={confirmPassword}
+              showToggle
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCorrect={false}
+              autoCapitalize="none"
+              textContentType="password"
+            />
+
+            <PasswordStrengthMeter password={password} />
+            <PasswordRequirements password={password} />
+
+            <TermsCheckbox checked={agreed} onToggle={setAgreed} />
+
+            <PrimaryButton
+              title={Strings.createAccount}
+              onPress={handleSignUp}
+              loading={loading}
+              style={styles.submitButton}
+            />
+          </View>
+
+          <AuthFooter
+            prefix={Strings.alreadyHaveAccount}
+            linkText={Strings.logInLink}
+            onPress={() => navigation.navigate('Login')}
+            style={styles.footer}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </AuthBackground>
   );
 };
@@ -253,9 +278,6 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: wp('2.5%'),
     marginBottom: hp('1%'),
-  },
-  bottomSpacer: {
-    height: hp('3%'),
   },
 });
 
