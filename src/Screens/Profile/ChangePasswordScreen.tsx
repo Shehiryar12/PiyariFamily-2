@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   SafeAreaView,
@@ -28,13 +28,15 @@ import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
 import { authService } from '../../API';
 import { Strings } from '../../Constant/Strings';
+import { AuthStackParamList } from '../../Navigation/AuthNavigator';
+import { navigationRef } from '../../Navigation/navigationRef';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { fs, hp, wp } from '../../Functions/responsive';
 
-type NavigationProp = NativeStackNavigationProp<
-  ProfileStackParamList,
-  'ChangePassword'
+type NavigationProp = CompositeNavigationProp<
+  NativeStackNavigationProp<ProfileStackParamList, 'ChangePassword'>,
+  NativeStackNavigationProp<AuthStackParamList>
 >;
 
 const isCompactScreen = Dimensions.get('window').height < 740;
@@ -99,6 +101,15 @@ const ChangePasswordScreen = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleForgotPassword = () => {
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('ForgotPassword' as never);
+      return;
+    }
+
+    navigation.navigate('ForgotPassword');
+  };
 
   const handleUpdate = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -227,7 +238,7 @@ const ChangePasswordScreen = () => {
           <TouchableOpacity
             style={styles.forgotWrap}
             activeOpacity={0.85}
-            onPress={() => Toast.show('Password reset link sent')}
+            onPress={handleForgotPassword}
           >
             <Text style={styles.forgotText}>{Strings.forgotYourPassword}</Text>
           </TouchableOpacity>

@@ -143,7 +143,7 @@ const ForgotPasswordScreen = ({ navigation }: Props) => {
               activeOpacity={0.7}
             >
               <Text style={styles.backToLoginText}>
-                {Strings.backToLogIn}
+                {'Back'}
               </Text>
             </TouchableOpacity>
           </View>
