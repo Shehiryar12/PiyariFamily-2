@@ -10,7 +10,10 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
 import ScreenHeader from '../../Components/ScreenHeader';
@@ -24,6 +27,7 @@ import {
 } from '../../API';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { resetToLogin } from '../../Functions/authNavigation';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { fs, hp, wp } from '../../Functions/responsive';
 import {
   clearHomeMatches,
@@ -48,6 +52,7 @@ const LOSS_ITEMS = [
 
 const AccountOptionsScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -131,7 +136,7 @@ const AccountOptionsScreen = () => {
       />
 
       <ScrollView
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.heroSection}>
@@ -224,7 +229,14 @@ const AccountOptionsScreen = () => {
             {Strings.contactSupportBeforeLeaving}
           </Text>
         </TouchableOpacity>
+      </ScrollView>
 
+      <View
+        style={[
+          styles.goBackFooter,
+          { paddingBottom: getFooterBottomPadding(insets.bottom) },
+        ]}
+      >
         <TouchableOpacity
           style={styles.goBackWrap}
           activeOpacity={0.85}
@@ -232,7 +244,7 @@ const AccountOptionsScreen = () => {
         >
           <Text style={styles.goBackText}>{Strings.changedMindGoBack}</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -414,9 +426,13 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.primary,
   },
+  goBackFooter: {
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1%'),
+    backgroundColor: Colors.background,
+  },
   goBackWrap: {
     alignItems: 'center',
-    paddingBottom: hp('0.5%'),
   },
   goBackText: {
     fontSize: fs(14),

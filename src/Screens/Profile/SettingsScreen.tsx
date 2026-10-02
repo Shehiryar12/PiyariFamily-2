@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
-  Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -17,6 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
 import { AxiosError } from 'axios';
 import { Images } from '../../Assets';
+import ConfirmModal from '../../Components/ConfirmModal';
 import ScreenHeader from '../../Components/ScreenHeader';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
@@ -544,44 +543,16 @@ const SettingsScreen = () => {
         </View>
       </ScrollView>
 
-      <Modal
+      <ConfirmModal
         visible={logoutModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeLogoutModal}
-      >
-        <View style={styles.logoutBackdrop}>
-          <Pressable style={styles.logoutBackdropPress} onPress={closeLogoutModal} />
-          <View style={styles.logoutDialog}>
-            <View style={styles.logoutIconWrap}>
-              <Icon name="logout" size={fs(18)} color={Colors.white} />
-            </View>
-            <Text style={styles.logoutTitle}>{Strings.logOutConfirmTitle}</Text>
-            <Text style={styles.logoutMessage}>{Strings.logOutConfirmMessage}</Text>
-
-            <View style={styles.logoutActions}>
-              <TouchableOpacity
-                style={[styles.logoutActionBtn, styles.logoutNoBtn]}
-                activeOpacity={0.85}
-                disabled={loggingOut}
-                onPress={closeLogoutModal}
-              >
-                <Text style={styles.logoutNoText}>{Strings.no}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.logoutActionBtn, styles.logoutYesBtn]}
-                activeOpacity={0.85}
-                disabled={loggingOut}
-                onPress={handleLogout}
-              >
-                <Text style={styles.logoutYesText}>
-                  {loggingOut ? '...' : Strings.yes}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title={Strings.logOutConfirmTitle}
+        message={Strings.logOutConfirmMessage}
+        cancelLabel={Strings.no}
+        confirmLabel={Strings.yes}
+        loading={loggingOut}
+        onClose={closeLogoutModal}
+        onConfirm={handleLogout}
+      />
     </SafeAreaView>
   );
 };
@@ -814,79 +785,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.divider,
     marginLeft: wp('17%'),
-  },
-  logoutBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: wp('10%'),
-  },
-  logoutBackdropPress: {
-    ...StyleSheet.absoluteFill,
-  },
-  logoutDialog: {
-    backgroundColor: Colors.white,
-    borderRadius: wp('4%'),
-    paddingHorizontal: wp('4.5%'),
-    paddingTop: hp('2%'),
-    paddingBottom: hp('1.8%'),
-    alignItems: 'center',
-    width: '100%',
-  },
-  logoutIconWrap: {
-    width: wp('10%'),
-    height: wp('10%'),
-    borderRadius: wp('5%'),
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: hp('1.1%'),
-  },
-  logoutTitle: {
-    fontSize: fs(16),
-    fontFamily: Fonts.bold,
-    color: Colors.primary,
-    marginBottom: hp('0.5%'),
-    textAlign: 'center',
-  },
-  logoutMessage: {
-    fontSize: fs(12),
-    fontFamily: Fonts.regular,
-    color: Colors.textLight,
-    textAlign: 'center',
-    lineHeight: hp('2%'),
-    marginBottom: hp('1.8%'),
-  },
-  logoutActions: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: wp('2.5%'),
-  },
-  logoutActionBtn: {
-    flex: 1,
-    height: hp('4.6%'),
-    borderRadius: wp('2.5%'),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutNoBtn: {
-    backgroundColor: Colors.white,
-    borderWidth: 1.2,
-    borderColor: Colors.dividerPink,
-  },
-  logoutYesBtn: {
-    backgroundColor: Colors.primary,
-  },
-  logoutNoText: {
-    fontSize: fs(13),
-    fontFamily: Fonts.semiBold,
-    color: Colors.primary,
-  },
-  logoutYesText: {
-    fontSize: fs(13),
-    fontFamily: Fonts.semiBold,
-    color: Colors.white,
   },
 });
 
