@@ -246,6 +246,8 @@ export const Strings = {
   keepFinding: 'Keep Finding',
   interestSentNotice:
     'Your interest has been sent. {name} will be notified and can respond within 7 days.',
+  profileLiked: 'Profile liked successfully.',
+  profileUnliked: 'Profile unliked successfully.',
   potentialMatches: 'Potential matches for you',
   ayeshaAbout:
     'I am a family-oriented person who values honesty, kindness, and meaningful connections. I enjoy reading, traveling, and spending quality time with loved ones. Looking for a life partner who shares similar values and dreams of building a beautiful future together.',

@@ -38,7 +38,10 @@ import { popStackOrGoHome } from '../../Functions/tabNavigation';
 import { navigateToPhotoGallery } from '../../Functions/profileNavigation';
 import { fs, hp, wp } from '../../Functions/responsive';
 import {
+  removeFeaturedMatch,
+  removeShortlistedProfile,
   selectIsAccountInactive,
+  useAppDispatch,
   useAppSelector,
 } from '../../Redux';
 
@@ -52,6 +55,7 @@ const ProfileDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
+  const dispatch = useAppDispatch();
   const isAccountInactive = useAppSelector(selectIsAccountInactive);
   const { profileId, name, age, location, image, isVerified, pictureHidden } =
     route.params;
@@ -69,6 +73,8 @@ const ProfileDetailScreen = () => {
   const [loading, setLoading] = useState(!name);
   const [requestingPhotos, setRequestingPhotos] = useState(false);
   const [photoRequestSent, setPhotoRequestSent] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [liking, setLiking] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!name) {
@@ -77,10 +83,10 @@ const ProfileDetailScreen = () => {
 
     try {
       const res = await Api.getMatchProfile(profileId);
-
       if (isApiSuccess(res?.status, res?.data?.success)) {
         const mapped = mapMatchProfileDetail(res?.data, profileId, preview);
         setProfile(mapped);
+        setLiked(Boolean(mapped.isLiked));
       } else {
         if (!name) {
           setProfile(null);
@@ -170,6 +176,46 @@ const ProfileDetailScreen = () => {
     }
   };
 
+  const handleLike = async () => {
+    if (!profile || liking) {
+      return;
+    }
+
+    const wasLiked = liked;
+    setLiking(true);
+
+    try {
+      const res = await Api.sendShortlistInterest(profile.id);
+
+      if (res?.status == 200) {
+        if (wasLiked) {
+          setLiked(false);
+          dispatch(removeShortlistedProfile(profile.id));
+          Toast.show(Strings.profileUnliked, Toast.SHORT);
+          return;
+        }
+
+        setLiked(true);
+        Toast.show(Strings.profileLiked, Toast.SHORT);
+        dispatch(removeFeaturedMatch(profile.id));
+        navigation.navigate('MatchSuccess', {
+          name: profile.fullName.split(' ')[0],
+          fullName: profile.fullName,
+          matchId: profile.id,
+          matchImage: profile.image,
+          mutualMatch: Boolean(res.mutual_match),
+        });
+        return;
+      }
+
+      Toast.show(res?.message ?? 'Failed to send interest', Toast.LONG);
+    } catch (error) {
+      Toast.show(getApiErrorMessage(error, 'Failed to send interest'), Toast.LONG);
+    } finally {
+      setLiking(false);
+    }
+  };
+
   const openPhotoGallery = () => {
     navigateToPhotoGallery(navigation, {
       userId: profile.id,
@@ -228,8 +274,24 @@ const ProfileDetailScreen = () => {
               <Icon name="chevron-left" size={fs(26)} color={Colors.white} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.heroIconBtn} activeOpacity={0.85}>
-              <Icon name="heart-outline" size={fs(22)} color={Colors.white} />
+            <TouchableOpacity
+              style={styles.heroIconBtn}
+              activeOpacity={0.85}
+              disabled={liking}
+              onPress={handleLike}
+            >
+              {liking ? (
+                <ActivityIndicator
+                  size="small"
+                  color={liked ? Colors.redish : Colors.white}
+                />
+              ) : (
+                <Icon
+                  name={liked ? 'heart' : 'heart-outline'}
+                  size={fs(22)}
+                  color={liked ? Colors.redish : Colors.white}
+                />
+              )}
             </TouchableOpacity>
           </View>
 

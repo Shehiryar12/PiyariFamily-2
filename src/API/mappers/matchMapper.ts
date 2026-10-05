@@ -134,6 +134,9 @@ export type MatchApiItem = {
   residential_status?: string | null;
   residence_status?: string | null;
   interests?: string[] | null;
+  is_like?: boolean | number | string | null;
+  is_liked?: boolean | number | string | null;
+  liked?: boolean | number | string | null;
   user?: MatchApiItem;
   profile?: MatchApiItem;
 };
@@ -1496,6 +1499,9 @@ export type MatchProfilePreview = {
   pictureHidden?: boolean;
 };
 
+const isTruthyFlag = (value?: boolean | number | string | null) =>
+  value === true || value === 1 || value === '1' || value === 'true';
+
 const isRemoteProfileImage = (image?: ImageSourcePropType | null) =>
   Boolean(
     image &&
@@ -1629,6 +1635,7 @@ export const mapMatchProfileDetail = (
     interests: Array.isArray(profile.interests)
       ? profile.interests.filter(Boolean).map(String)
       : [],
+    isLiked: [profile.is_liked, profile.is_like, profile.liked].some(isTruthyFlag),
     photosNeedAccess: profileNeedsPhotoAccess(profile, image),
     pictureHidden:
       Boolean(preview?.pictureHidden) || visibility.pictureVisible === false,

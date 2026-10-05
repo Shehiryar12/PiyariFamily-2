@@ -35,6 +35,7 @@ import { LikeStackParamList } from '../../Navigation/LikeStackNavigator';
 import { fs, hp, wp } from '../../Functions/responsive';
 import { navigateToHomeTab, useTabRootBackToHome } from '../../Functions/tabNavigation';
 import {
+  removeShortlistedProfile,
   selectShortlistLiked,
   selectShortlistLikedMe,
   setShortlistData,
@@ -61,6 +62,7 @@ const ShortlistedScreen = () => {
   const [loading, setLoading] = useState(
     bucket.profiles.length === 0 && bucket.total === 0,
   );
+  const [unlikingId, setUnlikingId] = useState<string | null>(null);
 
   const profiles = bucket.profiles;
   const total = bucket.total;
@@ -75,7 +77,6 @@ const ShortlistedScreen = () => {
       const res = await Api.getShortlist(tab);
       const body = res?.data;
       const ok = isApiSuccess(res?.status, body?.success);
-
       if (!ok) {
         dispatch(
           setShortlistData({
@@ -144,6 +145,29 @@ const ShortlistedScreen = () => {
     }, [fetchShortlist]),
   );
 
+  const handleUnlike = async (profileId: string) => {
+    if (activeTab !== 'liked' || unlikingId) {
+      return;
+    }
+
+    setUnlikingId(profileId);
+
+    try {
+      const res = await Api.sendShortlistInterest(profileId);
+
+      if (res?.status == 200) {
+        dispatch(removeShortlistedProfile(profileId));
+        return;
+      }
+
+      Toast.show(res?.message ?? 'Failed to unlike profile', Toast.LONG);
+    } catch (error) {
+      Toast.show(getApiErrorMessage(error, 'Failed to unlike profile'), Toast.LONG);
+    } finally {
+      setUnlikingId(null);
+    }
+  };
+
   const renderProfile = ({ item }: { item: ShortlistedProfile }) => (
     <View style={styles.card}>
       <Image
@@ -159,7 +183,22 @@ const ShortlistedScreen = () => {
             <Text style={styles.cardName} numberOfLines={1}>
               {item.name}, {item.age}
             </Text>
-            <Icon name="heart" size={fs(20)} color={Colors.primary} />
+            {activeTab === 'liked' ? (
+              <TouchableOpacity
+                activeOpacity={0.75}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={unlikingId === item.id}
+                onPress={() => handleUnlike(item.id)}
+              >
+                {unlikingId === item.id ? (
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                ) : (
+                  <Icon name="heart" size={fs(20)} color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ) : (
+              <Icon name="heart" size={fs(20)} color={Colors.primary} />
+            )}
           </View>
 
           <View style={styles.locationRow}>

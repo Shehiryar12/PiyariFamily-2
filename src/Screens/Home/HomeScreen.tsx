@@ -144,7 +144,6 @@ const HomeScreen = () => {
         applyHomePayload([], []);
         return;
       }
-
       const mapped = mapHomeMatches(res?.data);
       const greetingParts = mapHomeGreeting(mapped.greeting);
       const title =
@@ -259,8 +258,8 @@ const HomeScreen = () => {
       try {
 
         const res = await Api.sendShortlistInterest(current.id);
-
         if (res?.status == 200) {
+          Toast.show(Strings.profileLiked, Toast.SHORT);
           dispatch(removeFeaturedMatch(current.id));
           navigation.navigate('MatchSuccess', {
             name: current.name.split(' ')[0],
@@ -530,7 +529,7 @@ const HomeScreen = () => {
           <Icon name="chevron-right" size={fs(22)} color={Colors.primary} />
         </TouchableOpacity>
 
-        {displayFeatured.length > 0 ? (
+        {displayFeatured?.length > 0 ? (
           <>
         <FlatList
           ref={sliderRef}

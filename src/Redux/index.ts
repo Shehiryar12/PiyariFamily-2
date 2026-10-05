@@ -55,6 +55,7 @@ export type { HomeState } from './slices/homeSlice';
 export {
   setShortlistData,
   clearShortlist,
+  removeShortlistedProfile,
   selectShortlistLiked,
   selectShortlistLikedMe,
 } from './slices/shortlistSlice';

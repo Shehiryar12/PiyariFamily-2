@@ -3,7 +3,7 @@ import { StyleProp, ViewStyle } from 'react-native';
 
 const HIDDEN_TAB_BAR_ROUTES: Record<string, string[]> = {
   Home: ['ProfileDetail', 'MatchSuccess'],
-  Search: ['FilterMatches', 'ProfileDetail'],
+  Search: ['FilterMatches', 'ProfileDetail', 'MatchSuccess'],
   Messages: ['ChatRequests', 'Chat'],
   Like: ['FilterMatches', 'ProfileDetail', 'MatchSuccess'],
   Profile: [

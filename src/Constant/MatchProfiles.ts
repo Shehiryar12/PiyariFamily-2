@@ -31,6 +31,7 @@ export type ProfileDetail = {
   photosNeedAccess?: boolean;
   pictureHidden?: boolean;
   additionalPhotosHidden?: boolean;
+  isLiked?: boolean;
 };
 
 export const PROFILE_DETAILS: Record<string, ProfileDetail> = {

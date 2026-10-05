@@ -47,10 +47,23 @@ const shortlistSlice = createSlice({
       }
     },
     clearShortlist: () => initialState,
+    removeShortlistedProfile: (state, action: PayloadAction<string>) => {
+      const nextProfiles = state.i_liked.profiles.filter(
+        profile => profile.id !== action.payload,
+      );
+
+      if (nextProfiles.length === state.i_liked.profiles.length) {
+        return;
+      }
+
+      state.i_liked.profiles = nextProfiles;
+      state.i_liked.total = Math.max(0, state.i_liked.total - 1);
+    },
   },
 });
 
-export const { setShortlistData, clearShortlist } = shortlistSlice.actions;
+export const { setShortlistData, clearShortlist, removeShortlistedProfile } =
+  shortlistSlice.actions;
 
 export const selectShortlistLiked = (state: { shortlist: ShortlistState }) =>
   state.shortlist.i_liked;

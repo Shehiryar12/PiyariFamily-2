@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ImageSourcePropType } from 'react-native';
 import FilterMatchesScreen from '../Screens/Like/FilterMatchesScreen';
+import MatchSuccessScreen from '../Screens/Home/MatchSuccessScreen';
 import ProfileDetailScreen from '../Screens/Home/ProfileDetailScreen';
 import { SearchScreen } from '../Screens/Search';
 import type { SuggestedMatch } from '../API';
@@ -24,6 +25,13 @@ export type SearchStackParamList = {
     isVerified?: boolean;
     pictureHidden?: boolean;
   };
+  MatchSuccess: {
+    name: string;
+    fullName: string;
+    matchImage: ImageSourcePropType;
+    matchId?: string;
+    mutualMatch?: boolean;
+  };
 };
 
 const Stack = createNativeStackNavigator<SearchStackParamList>();
@@ -39,6 +47,11 @@ const SearchStackNavigator = () => {
       <Stack.Screen name="SearchMain" component={SearchScreen} />
       <Stack.Screen name="FilterMatches" component={FilterMatchesScreen} />
       <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />
+      <Stack.Screen
+        name="MatchSuccess"
+        component={MatchSuccessScreen}
+        options={{ animation: 'fade' }}
+      />
     </Stack.Navigator>
   );
 };
