@@ -82,8 +82,11 @@ const ProtectedPhoto = ({
 const ViewProfileGalleryScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<GalleryRoute>();
-  const { userId, name: previewName, accessGranted: requestAccessGranted } =
-    route.params;
+  const {
+    userId,
+    name: previewName = '',
+    accessGranted: requestAccessGranted,
+  } = route.params ?? {};
   const [name, setName] = useState(previewName);
   const [photos, setPhotos] = useState<ImageSourcePropType[]>([]);
   const [accessGranted, setAccessGranted] = useState(
@@ -122,12 +125,8 @@ const ViewProfileGalleryScreen = () => {
       if (galleryOk) {
         const gallery = mapPhotoGallery(res?.data, userId, previewName);
         setName(gallery.name || previewName);
-        setHiddenByOwner(gallery.hiddenByOwner);
-        setAccessGranted(
-          gallery.hiddenByOwner
-            ? false
-            : gallery.accessGranted || gallery.photos.length > 0,
-        );
+        setHiddenByOwner(gallery.hiddenByOwner && !gallery.accessGranted);
+        setAccessGranted(gallery.accessGranted);
         setPhotos(gallery.photos);
         const hiddenMessage = gallery.hiddenByOwner
           ? !gallery.profilePictureVisible && !gallery.additionalPhotosVisible
@@ -167,7 +166,7 @@ const ViewProfileGalleryScreen = () => {
   );
 
   const requestPhotoAccess = async () => {
-    if (!userId || requesting || requestSent || hiddenByOwner) {
+    if (!userId || requesting || requestSent) {
       return;
     }
 
@@ -243,7 +242,7 @@ const ViewProfileGalleryScreen = () => {
             />
           )}
           <Text style={styles.emptyText}>{emptyMessage}</Text>
-          {!accessGranted && !hiddenByOwner && userId ? (
+          {!accessGranted && userId ? (
             <TouchableOpacity
               style={styles.requestBtn}
               activeOpacity={0.85}

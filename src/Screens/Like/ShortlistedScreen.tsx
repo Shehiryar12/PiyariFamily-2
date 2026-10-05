@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
 import { Images } from '../../Assets';
+import HiddenPhotoOverlay from '../../Components/HiddenPhotoOverlay';
 import ScreenHeader from '../../Components/ScreenHeader';
 import {
   Api,
@@ -34,6 +35,7 @@ import { Strings } from '../../Constant/Strings';
 import { LikeStackParamList } from '../../Navigation/LikeStackNavigator';
 import { fs, hp, wp } from '../../Functions/responsive';
 import { navigateToHomeTab, useTabRootBackToHome } from '../../Functions/tabNavigation';
+import { confirmPhotoAccessRequest } from '../../Functions/photoAccessRequest';
 import {
   removeShortlistedProfile,
   selectShortlistLiked,
@@ -170,12 +172,23 @@ const ShortlistedScreen = () => {
 
   const renderProfile = ({ item }: { item: ShortlistedProfile }) => (
     <View style={styles.card}>
-      <Image
-        key={getImageCacheKey(item.image, item.id)}
-        source={item.image}
-        style={styles.avatar}
-        resizeMode="cover"
-      />
+      <View style={styles.avatarWrap}>
+        <Image
+          key={getImageCacheKey(item.image, item.id)}
+          source={item.image}
+          style={styles.avatar}
+          resizeMode="cover"
+        />
+        {item.pictureHidden ? (
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={0.9}
+            onPress={() => confirmPhotoAccessRequest(item.id)}
+          >
+            <HiddenPhotoOverlay />
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       <View style={styles.cardBody}>
         <View style={styles.cardTop}>
@@ -436,6 +449,12 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: wp('3.8%'),
+  },
+  avatarWrap: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: wp('3.8%'),
+    overflow: 'hidden',
   },
   cardBody: {
     flex: 1,

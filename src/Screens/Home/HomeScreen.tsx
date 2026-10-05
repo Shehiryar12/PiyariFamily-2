@@ -20,6 +20,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
 import { AxiosError } from 'axios';
 import { Images } from '../../Assets';
+import HiddenPhotoOverlay from '../../Components/HiddenPhotoOverlay';
+import { confirmPhotoAccessRequest } from '../../Functions/photoAccessRequest';
 import {
   Api,
   getApiErrorMessage,
@@ -403,6 +405,15 @@ const HomeScreen = () => {
           style={styles.suggestedImage}
           resizeMode="cover"
         />
+        {match.pictureHidden ? (
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={0.9}
+            onPress={() => confirmPhotoAccessRequest(match.id)}
+          >
+            <HiddenPhotoOverlay />
+          </TouchableOpacity>
+        ) : null}
 
         <View style={styles.suggestedBadgeColumn}>
           <View style={styles.suggestedTierBadge}>
@@ -477,7 +488,17 @@ const HomeScreen = () => {
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.72)']}
         style={styles.featuredGradient}
+        pointerEvents="none"
       />
+      {item.pictureHidden ? (
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={0.9}
+          onPress={() => confirmPhotoAccessRequest(item.id)}
+        >
+          <HiddenPhotoOverlay />
+        </TouchableOpacity>
+      ) : null}
 
       <View style={styles.featuredBadges}>
         {item.isNew ? (

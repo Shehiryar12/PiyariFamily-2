@@ -2,7 +2,9 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Images } from '../../../Assets';
+import HiddenPhotoOverlay from '../../../Components/HiddenPhotoOverlay';
 import { getImageCacheKey, type SuggestedMatch } from '../../../API';
+import { confirmPhotoAccessRequest } from '../../../Functions/photoAccessRequest';
 import { Colors } from '../../../Constant/Colors';
 import { Fonts } from '../../../Constant/Fonts';
 import { Strings } from '../../../Constant/Strings';
@@ -28,6 +30,15 @@ const SearchMatchCard = ({ match, onPress, onLike, liking }: Props) => (
         style={styles.image}
         resizeMode="cover"
       />
+      {match.pictureHidden ? (
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={0.9}
+          onPress={() => confirmPhotoAccessRequest(match.id)}
+        >
+          <HiddenPhotoOverlay />
+        </TouchableOpacity>
+      ) : null}
 
       <View style={styles.badgeColumn}>
         <View style={styles.tierBadge}>

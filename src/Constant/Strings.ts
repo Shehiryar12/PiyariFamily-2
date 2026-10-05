@@ -275,6 +275,8 @@ export const Strings = {
   photoGalleryError: 'Failed to load photo gallery',
   photoGalleryAccessDenied: 'You do not have access to these photos',
   requestPhotoAccess: 'Request Photo Access',
+  photoAccessRequestPrompt:
+    'Send a request to view this profile picture? It stays hidden until they accept.',
   photoAccessRequested: 'Photo access request sent',
   photoAccessRequestSent: 'Request sent',
   photoAccessRequestError: 'Failed to send photo access request',

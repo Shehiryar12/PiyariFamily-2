@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import FilterMatchesScreen from '../Screens/Like/FilterMatchesScreen';
 import MatchSuccessScreen from '../Screens/Home/MatchSuccessScreen';
 import ProfileDetailScreen from '../Screens/Home/ProfileDetailScreen';
+import ViewProfileGalleryScreen from '../Screens/Profile/ViewProfileGalleryScreen';
 import ShortlistedScreen from '../Screens/Like/ShortlistedScreen';
 
 export type LikeStackParamList = {
@@ -25,6 +26,11 @@ export type LikeStackParamList = {
     matchId?: string;
     mutualMatch?: boolean;
   };
+  ViewProfileGallery: {
+    userId?: string;
+    name: string;
+    accessGranted?: boolean;
+  };
 };
 
 const Stack = createNativeStackNavigator<LikeStackParamList>();
@@ -45,6 +51,7 @@ const LikeStackNavigator = () => {
         component={MatchSuccessScreen}
         options={{ animation: 'fade' }}
       />
+      <Stack.Screen name="ViewProfileGallery" component={ViewProfileGalleryScreen} />
     </Stack.Navigator>
   );
 };

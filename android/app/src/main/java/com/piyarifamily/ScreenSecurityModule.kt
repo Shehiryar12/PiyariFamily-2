@@ -22,18 +22,22 @@ class ScreenSecurityModule(private val reactContext: ReactApplicationContext) :
 
   @ReactMethod
   fun setSecure(enable: Boolean) {
-  val activity = reactContext.currentActivity ?: return
+    val activity = reactContext.currentActivity ?: return
 
     activity.runOnUiThread {
-      if (enable) {
-        activity.window.setFlags(
-            WindowManager.LayoutParams.FLAG_SECURE,
-            WindowManager.LayoutParams.FLAG_SECURE,
-        )
-        registerCaptureCallback(activity)
-      } else {
-        activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        unregisterCaptureCallback(activity)
+      try {
+        val window = activity.window ?: return@runOnUiThread
+        if (enable) {
+          window.setFlags(
+              WindowManager.LayoutParams.FLAG_SECURE,
+              WindowManager.LayoutParams.FLAG_SECURE,
+          )
+          registerCaptureCallback(activity)
+        } else {
+          window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+          unregisterCaptureCallback(activity)
+        }
+      } catch (_: Exception) {
       }
     }
   }
@@ -49,23 +53,31 @@ class ScreenSecurityModule(private val reactContext: ReactApplicationContext) :
   }
 
   private fun registerCaptureCallback(activity: Activity) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || captureCallback != null) {
-      return
-    }
+    try {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE || captureCallback != null) {
+        return
+      }
 
-    val callback = Activity.ScreenCaptureCallback {
-      emitCapture("screenshot")
+      val callback = Activity.ScreenCaptureCallback {
+        emitCapture("screenshot")
+      }
+      captureCallback = callback
+      activity.registerScreenCaptureCallback(activity.mainExecutor, callback)
+    } catch (_: Exception) {
+      captureCallback = null
     }
-    captureCallback = callback
-    activity.registerScreenCaptureCallback(activity.mainExecutor, callback)
   }
 
   private fun unregisterCaptureCallback(activity: Activity) {
     val callback = captureCallback ?: return
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-      activity.unregisterScreenCaptureCallback(callback)
-    }
     captureCallback = null
+
+    try {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        activity.unregisterScreenCaptureCallback(callback)
+      }
+    } catch (_: Exception) {
+    }
   }
 
   private fun emitCapture(type: String) {

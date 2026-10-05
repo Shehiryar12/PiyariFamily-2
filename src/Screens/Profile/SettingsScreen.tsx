@@ -321,7 +321,7 @@ const SettingsScreen = () => {
       />
 
       <ScrollView
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.profileCard}>

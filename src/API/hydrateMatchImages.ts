@@ -29,33 +29,30 @@ export const getImageCacheKey = (
 };
 
 const withHydratedImage = async <T extends MatchWithImage>(item: T): Promise<T> => {
-  if (item.pictureHidden) {
-    return { ...item, image: Images.hiddenProfile, pictureHidden: true };
-  }
-
-  if (isRemoteImage(item.image)) {
-    return item;
-  }
-
   try {
     const res = await Api.getMatchProfile(item.id);
-    if (res?.status != 200) {
-      return item;
-    }
+    const ok = res?.status == 200 || res?.status == 201;
 
-    const detail = mapMatchProfileDetail(res.data, item.id, {
-      image: item.image,
-    });
+    if (ok) {
+      const detail = mapMatchProfileDetail(res.data, item.id, {
+        image: item.image,
+        pictureHidden: item.pictureHidden,
+      });
 
-    if (detail.pictureHidden) {
-      return { ...item, image: Images.hiddenProfile, pictureHidden: true };
-    }
+      if (detail.pictureHidden) {
+        return { ...item, image: Images.hiddenProfile, pictureHidden: true };
+      }
 
-    if (isRemoteImage(detail.image)) {
-      return { ...item, image: detail.image };
+      if (isRemoteImage(detail.image)) {
+        return { ...item, image: detail.image, pictureHidden: false };
+      }
     }
   } catch {
-    return item;
+    // Keep the list image when the profile check fails.
+  }
+
+  if (item.pictureHidden) {
+    return { ...item, image: Images.hiddenProfile, pictureHidden: true };
   }
 
   return item;

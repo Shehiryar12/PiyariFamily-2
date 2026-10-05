@@ -81,6 +81,18 @@ const unwrapPayload = (
   return current as PhotoGalleryResponse;
 };
 
+const toGalleryPhoto = (item: unknown): PhotoGalleryPhotoApi | null => {
+  if (typeof item === 'string' && item.trim()) {
+    return { url: item.trim() };
+  }
+
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  return item as PhotoGalleryPhotoApi;
+};
+
 const extractPhotos = (
   response?: PhotoGalleryResponse | null,
 ): PhotoGalleryPhotoApi[] => {
@@ -96,21 +108,17 @@ const extractPhotos = (
       ? data.data
       : [];
   const userPhotos = Array.isArray(data.user?.photos) ? data.user.photos : [];
-  const extras: PhotoGalleryPhotoApi[] = [
+  const extras: Array<PhotoGalleryPhotoApi | null> = [
     data.user?.profile_photo
       ? { url: data.user.profile_photo, is_main: true, index: -1 }
       : null,
     data.user?.photo ? { url: data.user.photo, is_main: true, index: -1 } : null,
     data.user?.image ? { url: data.user.image, is_main: true, index: -1 } : null,
-  ].filter(Boolean) as PhotoGalleryPhotoApi[];
-
-  return [
-    ...fromList,
-    ...userPhotos.map(item =>
-      typeof item === 'string' ? { url: item } : item,
-    ),
-    ...extras,
   ];
+
+  return [...fromList, ...userPhotos, ...extras]
+    .map(toGalleryPhoto)
+    .filter((item): item is PhotoGalleryPhotoApi => Boolean(item));
 };
 
 const isMainGalleryPhoto = (item: PhotoGalleryPhotoApi) =>
@@ -156,12 +164,21 @@ export const mapPhotoGallery = (
     ) ??
     parseVisibilityFlag(data?.user?.additional_photos_visible) ??
     true;
+  const grantedFlag =
+    parseVisibilityFlag(data?.access_granted) ??
+    parseVisibilityFlag(data?.visibility?.access_granted) ??
+    parseVisibilityFlag(data?.visibility?.can_view_profile_photo) ??
+    parseVisibilityFlag(
+      (data as { can_view_profile_photo?: unknown } | null)?.can_view_profile_photo,
+    );
+  const showPicture = pictureVisible || grantedFlag === true;
   const rawPhotos = filterGalleryPhotos(
-    extractPhotos(response)
-      .slice()
-      .sort((left, right) => Number(left.index ?? 0) - Number(right.index ?? 0)),
-    pictureVisible,
+    extractPhotos(response),
+    showPicture,
     additionalVisible,
+  ).sort(
+    (left, right) =>
+      Number(left?.index ?? 0) - Number(right?.index ?? 0),
   );
   const photos = rawPhotos
     .map(item =>
@@ -178,14 +195,8 @@ export const mapPhotoGallery = (
     )
     .filter(Boolean)
     .map(uri => ({ uri }));
-  const grantedFlag =
-    parseVisibilityFlag(data?.access_granted) ??
-    parseVisibilityFlag(data?.visibility?.access_granted);
-  const hiddenByOwner = !pictureVisible || !additionalVisible;
-  const accessGranted =
-    !hiddenByOwner &&
-    (grantedFlag === true ||
-      (grantedFlag !== false && photos.length > 0));
+  const hiddenByOwner = !showPicture || !additionalVisible;
+  const accessGranted = grantedFlag === true || (!hiddenByOwner && photos.length > 0);
 
   return {
     userId: pickString(
@@ -195,7 +206,7 @@ export const mapPhotoGallery = (
     name: pickString(data?.user?.name, data?.user?.full_name, fallbackName),
     accessGranted,
     photos,
-    profilePictureVisible: pictureVisible,
+    profilePictureVisible: showPicture,
     additionalPhotosVisible: additionalVisible,
     hiddenByOwner,
   };

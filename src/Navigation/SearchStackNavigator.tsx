@@ -4,6 +4,7 @@ import { ImageSourcePropType } from 'react-native';
 import FilterMatchesScreen from '../Screens/Like/FilterMatchesScreen';
 import MatchSuccessScreen from '../Screens/Home/MatchSuccessScreen';
 import ProfileDetailScreen from '../Screens/Home/ProfileDetailScreen';
+import ViewProfileGalleryScreen from '../Screens/Profile/ViewProfileGalleryScreen';
 import { SearchScreen } from '../Screens/Search';
 import type { SuggestedMatch } from '../API';
 
@@ -32,6 +33,11 @@ export type SearchStackParamList = {
     matchId?: string;
     mutualMatch?: boolean;
   };
+  ViewProfileGallery: {
+    userId?: string;
+    name: string;
+    accessGranted?: boolean;
+  };
 };
 
 const Stack = createNativeStackNavigator<SearchStackParamList>();
@@ -52,6 +58,7 @@ const SearchStackNavigator = () => {
         component={MatchSuccessScreen}
         options={{ animation: 'fade' }}
       />
+      <Stack.Screen name="ViewProfileGallery" component={ViewProfileGalleryScreen} />
     </Stack.Navigator>
   );
 };

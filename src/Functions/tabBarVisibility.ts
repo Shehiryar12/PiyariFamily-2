@@ -2,10 +2,10 @@ import { getFocusedRouteNameFromRoute, Route } from '@react-navigation/native';
 import { StyleProp, ViewStyle } from 'react-native';
 
 const HIDDEN_TAB_BAR_ROUTES: Record<string, string[]> = {
-  Home: ['ProfileDetail', 'MatchSuccess'],
-  Search: ['FilterMatches', 'ProfileDetail', 'MatchSuccess'],
+  Home: ['ProfileDetail', 'MatchSuccess', 'ViewProfileGallery'],
+  Search: ['FilterMatches', 'ProfileDetail', 'MatchSuccess', 'ViewProfileGallery'],
   Messages: ['ChatRequests', 'Chat'],
-  Like: ['FilterMatches', 'ProfileDetail', 'MatchSuccess'],
+  Like: ['FilterMatches', 'ProfileDetail', 'MatchSuccess', 'ViewProfileGallery'],
   Profile: [
     'EditProfile',
     'VerifyProfile',

@@ -315,9 +315,18 @@ const PICTURE_VISIBILITY_KEYS = [
   'is_profile_photo_visible',
   'photo_visible',
   'is_photo_visible',
-  'can_view_profile_photo',
-  'can_view_photos',
 ];
+const VIEWER_ACCESS_KEYS = [
+  'can_view_profile_photo',
+  'photo_access_granted',
+  'has_photo_access',
+];
+const ACCEPTED_PHOTO_ACCESS = new Set([
+  'accepted',
+  'approved',
+  'granted',
+  'allowed',
+]);
 const ADDITIONAL_VISIBILITY_KEYS = [
   'additional_photos_visible',
   'additionalPhotosVisible',
@@ -364,6 +373,8 @@ export const resolveMatchPhotoVisibility = (item?: MatchApiItem | null) => {
     item,
     item.visibility,
     item.photo_visibility,
+    (item as { privacy?: unknown }).privacy,
+    (item as { photo_privacy?: unknown }).photo_privacy,
     (item as { settings?: unknown }).settings,
     item.user,
     item.user?.visibility,
@@ -400,6 +411,27 @@ export const resolveMatchPhotoVisibility = (item?: MatchApiItem | null) => {
       }
     }
   });
+
+  const viewerGranted = sources.some(source => {
+    if (pickVisibilityFromSource(source, VIEWER_ACCESS_KEYS) === true) {
+      return true;
+    }
+
+    if (!isPlainObject(source)) {
+      return false;
+    }
+
+    const status = [
+      source.photo_access_status,
+      source.photo_request_status,
+    ].find(value => typeof value === 'string' && value.trim());
+
+    return ACCEPTED_PHOTO_ACCESS.has(String(status ?? '').trim().toLowerCase());
+  });
+
+  if (viewerGranted) {
+    pictureVisible = true;
+  }
 
   return { pictureVisible, additionalVisible };
 };

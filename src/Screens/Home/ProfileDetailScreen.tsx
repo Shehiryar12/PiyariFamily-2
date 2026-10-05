@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
 import { Images } from '../../Assets';
+import HiddenPhotoOverlay from '../../Components/HiddenPhotoOverlay';
 import {
   Api,
   getApiErrorMessage,
@@ -35,7 +36,7 @@ import { Strings } from '../../Constant/Strings';
 import { HomeStackParamList } from '../../Navigation/HomeStackNavigator';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { popStackOrGoHome } from '../../Functions/tabNavigation';
-import { navigateToPhotoGallery } from '../../Functions/profileNavigation';
+import { confirmPhotoAccessRequest } from '../../Functions/photoAccessRequest';
 import { fs, hp, wp } from '../../Functions/responsive';
 import {
   removeFeaturedMatch,
@@ -132,10 +133,9 @@ const ProfileDetailScreen = () => {
     );
   }
 
+  const pictureLocked = Boolean(pictureHidden || profile?.pictureHidden);
   const photosHidden = Boolean(
-    pictureHidden ||
-      profile?.pictureHidden ||
-      profile?.additionalPhotosHidden,
+    pictureLocked || profile?.additionalPhotosHidden,
   );
 
   const handleSendPhotoRequest = async () => {
@@ -217,7 +217,7 @@ const ProfileDetailScreen = () => {
   };
 
   const openPhotoGallery = () => {
-    navigateToPhotoGallery(navigation, {
+    navigation.navigate('ViewProfileGallery', {
       userId: profile.id,
       name: profile.fullName,
       accessGranted:
@@ -230,7 +230,7 @@ const ProfileDetailScreen = () => {
   return (
     <View style={styles.root}>
       <ScrollView
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
           {
@@ -247,7 +247,11 @@ const ProfileDetailScreen = () => {
           <TouchableOpacity
             style={styles.heroPress}
             activeOpacity={0.92}
-            onPress={openPhotoGallery}
+            onPress={
+              pictureLocked
+                ? () => confirmPhotoAccessRequest(profile.id)
+                : openPhotoGallery
+            }
           >
             <Image
               key={getImageCacheKey(profile.image, profile.id)}
@@ -255,6 +259,7 @@ const ProfileDetailScreen = () => {
               style={styles.heroImage}
               resizeMode="cover"
             />
+            {pictureLocked ? <HiddenPhotoOverlay /> : null}
           </TouchableOpacity>
 
           <LinearGradient

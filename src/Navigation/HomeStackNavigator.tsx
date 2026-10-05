@@ -4,6 +4,7 @@ import { ImageSourcePropType } from 'react-native';
 import HomeScreen from '../Screens/Home/HomeScreen';
 import MatchSuccessScreen from '../Screens/Home/MatchSuccessScreen';
 import ProfileDetailScreen from '../Screens/Home/ProfileDetailScreen';
+import ViewProfileGalleryScreen from '../Screens/Profile/ViewProfileGalleryScreen';
 
 export type ProfileDetailParams = {
   profileId: string;
@@ -25,6 +26,11 @@ export type HomeStackParamList = {
     matchId?: string;
     mutualMatch?: boolean;
   };
+  ViewProfileGallery: {
+    userId?: string;
+    name: string;
+    accessGranted?: boolean;
+  };
 };
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
@@ -44,6 +50,7 @@ const HomeStackNavigator = () => {
         component={MatchSuccessScreen}
         options={{ animation: 'fade' }}
       />
+      <Stack.Screen name="ViewProfileGallery" component={ViewProfileGalleryScreen} />
     </Stack.Navigator>
   );
 };
