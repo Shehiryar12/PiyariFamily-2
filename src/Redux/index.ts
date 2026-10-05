@@ -44,6 +44,8 @@ export {
   setHomeMatches,
   clearHomeMatches,
   removeFeaturedMatch,
+  removeSuggestedMatch,
+  setHomeMatchLiked,
   dismissFeaturedMatch,
   selectHomeGreeting,
   selectHomeSubtitle,

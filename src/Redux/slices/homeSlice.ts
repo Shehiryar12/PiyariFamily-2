@@ -45,6 +45,29 @@ const homeSlice = createSlice({
         match => match.id !== action.payload,
       );
     },
+    removeSuggestedMatch: (state, action: PayloadAction<string>) => {
+      state.suggestedMatches = state.suggestedMatches.filter(
+        match => match.id !== action.payload,
+      );
+    },
+    setHomeMatchLiked: (
+      state,
+      action: PayloadAction<{ id: string; isLiked: boolean }>,
+    ) => {
+      const featured = state.featuredMatches.find(
+        match => match.id === action.payload.id,
+      );
+      if (featured) {
+        featured.isLiked = action.payload.isLiked;
+      }
+
+      const suggested = state.suggestedMatches.find(
+        match => match.id === action.payload.id,
+      );
+      if (suggested) {
+        suggested.isLiked = action.payload.isLiked;
+      }
+    },
     dismissFeaturedMatch: (state, action: PayloadAction<string>) => {
       const featuredIndex = state.featuredMatches.findIndex(
         match => match.id === action.payload,
@@ -73,6 +96,7 @@ const homeSlice = createSlice({
             : [],
         isNew: false,
         isVerified: nextSuggested.isVerified,
+        isLiked: nextSuggested.isLiked,
       });
     },
   },
@@ -82,6 +106,8 @@ export const {
   setHomeMatches,
   clearHomeMatches,
   removeFeaturedMatch,
+  removeSuggestedMatch,
+  setHomeMatchLiked,
   dismissFeaturedMatch,
 } = homeSlice.actions;
 

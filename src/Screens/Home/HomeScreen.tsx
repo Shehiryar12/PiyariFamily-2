@@ -47,6 +47,8 @@ import {
   useAppSelector,
   clearHomeMatches,
   removeFeaturedMatch,
+  removeSuggestedMatch,
+  setHomeMatchLiked,
   dismissFeaturedMatch,
   selectFeaturedMatches,
   selectHomeGreeting,
@@ -259,8 +261,19 @@ const HomeScreen = () => {
 
         const res = await Api.sendShortlistInterest(current.id);
         if (res?.status == 200) {
-          Toast.show(Strings.profileLiked, Toast.SHORT);
-          dispatch(removeFeaturedMatch(current.id));
+          const alreadyLiked = Boolean(current.isLiked);
+          dispatch(
+            setHomeMatchLiked({ id: current.id, isLiked: !alreadyLiked }),
+          );
+          Toast.show(
+            alreadyLiked ? Strings.profileUnliked : Strings.profileLiked,
+            Toast.SHORT,
+          );
+
+          if (alreadyLiked) {
+            return;
+          }
+
           navigation.navigate('MatchSuccess', {
             name: current.name.split(' ')[0],
             fullName: current.name,
@@ -282,6 +295,46 @@ const HomeScreen = () => {
       } finally {
         setLiking(false);
       }
+    }
+  };
+
+  const handleSuggestedLike = async (match: SuggestedMatch) => {
+    if (liking) {
+      return;
+    }
+
+    setLiking(true);
+
+    try {
+      const res = await Api.sendShortlistInterest(match.id);
+
+      if (res?.status == 200) {
+        const alreadyLiked = Boolean(match.isLiked);
+        dispatch(setHomeMatchLiked({ id: match.id, isLiked: !alreadyLiked }));
+        Toast.show(
+          alreadyLiked ? Strings.profileUnliked : Strings.profileLiked,
+          Toast.SHORT,
+        );
+
+        if (alreadyLiked) {
+          return;
+        }
+
+        navigation.navigate('MatchSuccess', {
+          name: match.name.split(' ')[0],
+          fullName: match.name,
+          matchId: match.id,
+          matchImage: match.image,
+          mutualMatch: Boolean(res.mutual_match),
+        });
+        return;
+      }
+
+      Toast.show(res?.message ?? 'Failed to send interest', Toast.LONG);
+    } catch (error) {
+      Toast.show(getApiErrorMessage(error, 'Failed to send interest'), Toast.LONG);
+    } finally {
+      setLiking(false);
     }
   };
 
@@ -395,11 +448,13 @@ const HomeScreen = () => {
           <TouchableOpacity
             style={styles.suggestedLikeBtn}
             activeOpacity={0.85}
+            disabled={liking}
+            onPress={() => handleSuggestedLike(match)}
           >
             <Icon
-              name="heart-outline"
+              name={match.isLiked ? 'heart' : 'heart-outline'}
               size={fs(16)}
-              color={Colors.primary}
+              color={match.isLiked ? Colors.redish : Colors.primary}
             />
           </TouchableOpacity>
         </View>
@@ -466,6 +521,14 @@ const HomeScreen = () => {
     </TouchableOpacity>
   );
 
+  const visibleSuggested = showAllSuggested
+    ? displaySuggested
+    : displaySuggested.slice(0, 2);
+  const suggestedRows: SuggestedMatch[][] = [];
+  for (let index = 0; index < visibleSuggested.length; index += 2) {
+    suggestedRows.push(visibleSuggested.slice(index, index + 2));
+  }
+
   if (isAccountInactive) {
     return null;
   }
@@ -473,7 +536,7 @@ const HomeScreen = () => {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <ScrollView
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.header}>
@@ -579,7 +642,10 @@ const HomeScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.likeBtn}
+            style={[
+              styles.likeBtn,
+              displayFeatured[activeIndex]?.isLiked && styles.likeBtnLiked,
+            ]}
             activeOpacity={0.85}
             onPress={handleLike}
           >
@@ -619,7 +685,17 @@ const HomeScreen = () => {
 
         {displaySuggested.length > 0 ? (
           <View style={styles.suggestedGrid}>
-            {(showAllSuggested ? displaySuggested : displaySuggested.slice(0, 2)).map(renderSuggestedCard)}
+            {suggestedRows.map(row => (
+              <View
+                key={row.map(item => item.id).join('-')}
+                style={styles.suggestedRow}
+              >
+                {row.map(renderSuggestedCard)}
+                {row.length === 1 ? (
+                  <View style={styles.suggestedCardSpacer} />
+                ) : null}
+              </View>
+            ))}
           </View>
         ) : (
           <Text style={styles.emptyText}>No suggested matches found</Text>
@@ -868,6 +944,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  likeBtnLiked: {
+    backgroundColor: Colors.redish,
+    shadowColor: Colors.redish,
+  },
   pagination: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -912,17 +992,22 @@ const styles = StyleSheet.create({
     paddingRight: wp('2%'),
   },
   suggestedGrid: {
+    gap: wp('3%'),
+  },
+  suggestedRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: wp('3%'),
   },
   suggestedCard: {
-    width: wp('43%'),
+    flex: 1,
     backgroundColor: Colors.white,
     borderRadius: wp('4.5%'),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#F0F0F0',
+  },
+  suggestedCardSpacer: {
+    flex: 1,
   },
   suggestedImageWrap: {
     width: '100%',

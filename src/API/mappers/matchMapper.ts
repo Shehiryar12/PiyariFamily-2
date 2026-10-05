@@ -23,6 +23,7 @@ export type FeaturedMatch = {
   isNew?: boolean;
   isVerified?: boolean;
   pictureHidden?: boolean;
+  isLiked?: boolean;
 };
 
 export type SuggestedMatch = {
@@ -39,6 +40,7 @@ export type SuggestedMatch = {
   tier: 'VIP' | 'VVIP';
   isVerified: boolean;
   pictureHidden?: boolean;
+  isLiked?: boolean;
 };
 
 export type BestMatchData = {
@@ -575,6 +577,11 @@ const isPhoneVerified = (profile: MatchApiItem) =>
   parseVisibilityFlag(profile.is_phone_verified) === true ||
   Boolean(pickString(profile.phone_verified_at));
 
+const readMatchLiked = (profile: MatchApiItem) => {
+  const value = profile.is_liked ?? profile.is_like ?? profile.liked;
+  return value === true || value === 1 || value === '1' || value === 'true';
+};
+
 export const mapFeaturedMatch = (
   item: MatchApiItem,
   index: number,
@@ -594,6 +601,7 @@ export const mapFeaturedMatch = (
     tags: buildTags(profile),
     isNew: Boolean(profile.is_new ?? profile.is_new_profile),
     isVerified: isPhoneVerified(profile),
+    isLiked: readMatchLiked(profile),
     ...(pictureHidden ? { pictureHidden: true } : {}),
   };
 };
@@ -654,6 +662,7 @@ export const mapSuggestedMatch = (
       profile.tier ?? profile.plan ?? profile.subscription_plan,
     ),
     isVerified: isPhoneVerified(profile),
+    isLiked: readMatchLiked(profile),
     ...(resolveMatchPhotoVisibility(profile).pictureVisible === false
       ? { pictureHidden: true }
       : {}),
@@ -1303,6 +1312,7 @@ export const suggestedToFeatured = (item: SuggestedMatch): FeaturedMatch => ({
       ? [{ icon: 'briefcase-outline', label: item.profession }]
       : [],
   isVerified: item.isVerified,
+  isLiked: Boolean(item.isLiked),
   ...(item.pictureHidden ? { pictureHidden: true } : {}),
 });
 
