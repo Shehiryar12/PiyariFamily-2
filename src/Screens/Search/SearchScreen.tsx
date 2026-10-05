@@ -12,6 +12,7 @@ import Toast from 'react-native-simple-toast';
 import {
   resolveUserCity,
   Api,
+  getApiErrorMessage,
   saveProfileCache,
   type FilterQuickOption,
   type FilterSetupData,
@@ -40,6 +41,8 @@ import {
   selectFilterHasExactMatches,
   selectFilterResults,
   selectProfile,
+  setFilterMatchLiked,
+  setHomeMatchLiked,
   useAppDispatch,
   useAppSelector,
 } from '../../Redux';
@@ -86,6 +89,7 @@ const SearchScreen = () => {
   );
   const [emptyMessage, setEmptyMessage] = useState(Strings.noMatchesFound);
   const [loading, setLoading] = useState(true);
+  const [likingId, setLikingId] = useState<string | null>(null);
   const searchGenerationRef = useRef(0);
   const lastSearchKeyRef = useRef('');
   const inFlightKeyRef = useRef('');
@@ -189,14 +193,6 @@ const SearchScreen = () => {
         if (trimmedQuery.length >= MIN_SEARCH_LENGTH || quickFilter) {
           dispatch(clearFilterResults());
         }
-        if (trimmedQuery.length >= MIN_SEARCH_LENGTH) {
-          setRecentSearches(current =>
-            [trimmedQuery, ...current.filter(item => item !== trimmedQuery)].slice(
-              0,
-              8,
-            ),
-          );
-        }
       } catch (error) {
         if (generation !== searchGenerationRef.current) {
           return;
@@ -239,6 +235,9 @@ const SearchScreen = () => {
     lastSearchKeyRef.current = '';
     if (trimmed.length >= MIN_SEARCH_LENGTH) {
       setActiveQuickFilter(null);
+      setRecentSearches(current =>
+        [trimmed, ...current.filter(item => item !== trimmed)].slice(0, 8),
+      );
     }
     setSubmittedQuery(trimmed);
   }, []);
@@ -268,19 +267,6 @@ const SearchScreen = () => {
       };
     }, [profile?.gender]),
   );
-
-  useEffect(() => {
-    const trimmed = searchQuery.trim();
-    if (trimmed.length < MIN_SEARCH_LENGTH) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setSubmittedQuery(current => (current === trimmed ? current : trimmed));
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   useFocusEffect(
     useCallback(() => {
@@ -356,6 +342,50 @@ const SearchScreen = () => {
       : Strings.suggestedMatches;
   const hasSubmittedSearch = submittedQuery.trim().length >= MIN_SEARCH_LENGTH;
 
+  const handleLikeMatch = async (match: SuggestedMatch) => {
+    if (likingId) {
+      return;
+    }
+
+    const alreadyLiked = Boolean(match.isLiked);
+    setLikingId(match.id);
+
+    try {
+      const res = await Api.sendShortlistInterest(match.id);
+
+      if (res?.status == 200) {
+        setSuggestedMatches(current =>
+          current.map(item =>
+            item.id === match.id ? { ...item, isLiked: !alreadyLiked } : item,
+          ),
+        );
+        dispatch(setHomeMatchLiked({ id: match.id, isLiked: !alreadyLiked }));
+        dispatch(setFilterMatchLiked({ id: match.id, isLiked: !alreadyLiked }));
+        Toast.show(
+          alreadyLiked ? Strings.profileUnliked : Strings.profileLiked,
+          Toast.SHORT,
+        );
+
+        if (!alreadyLiked) {
+          navigation.navigate('MatchSuccess', {
+            name: match.name.split(' ')[0],
+            fullName: match.name,
+            matchId: match.id,
+            matchImage: match.image,
+            mutualMatch: Boolean(res.mutual_match),
+          });
+        }
+        return;
+      }
+
+      Toast.show(res?.message ?? 'Failed to send interest', Toast.LONG);
+    } catch (error) {
+      Toast.show(getApiErrorMessage(error, 'Failed to send interest'), Toast.LONG);
+    } finally {
+      setLikingId(null);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <ScrollView
@@ -400,13 +430,14 @@ const SearchScreen = () => {
           }
           onClearAll={() => setRecentSearches([])}
         />
-
         {loading ? (
           <SearchLoading />
         ) : suggestedMatches.length > 0 ? (
           <SearchMatchList
             title={matchesTitle}
             matches={suggestedMatches}
+            likingId={likingId}
+            onLikeMatch={handleLikeMatch}
             onPressMatch={match =>
               navigation.navigate('ProfileDetail', {
                 profileId: match.id,

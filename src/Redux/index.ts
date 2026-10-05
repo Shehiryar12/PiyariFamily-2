@@ -71,6 +71,7 @@ export type { ReferralState } from './slices/referralSlice';
 export {
   setFilterForm,
   setFilterResults,
+  setFilterMatchLiked,
   clearFilterResults,
   clearFilter,
   selectFilterForm,

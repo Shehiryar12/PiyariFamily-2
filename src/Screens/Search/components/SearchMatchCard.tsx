@@ -11,9 +11,11 @@ import { fs, hp, wp } from '../../../Functions/responsive';
 type Props = {
   match: SuggestedMatch;
   onPress: () => void;
+  onLike: () => void;
+  liking?: boolean;
 };
 
-const SearchMatchCard = ({ match, onPress }: Props) => (
+const SearchMatchCard = ({ match, onPress, onLike, liking }: Props) => (
   <TouchableOpacity
     style={styles.card}
     activeOpacity={0.9}
@@ -62,8 +64,17 @@ const SearchMatchCard = ({ match, onPress }: Props) => (
         <View style={styles.professionTag}>
           <Text style={styles.professionText}>{match.profession}</Text>
         </View>
-        <TouchableOpacity style={styles.likeBtn} activeOpacity={0.85}>
-          <Icon name="heart-outline" size={fs(16)} color={Colors.primary} />
+        <TouchableOpacity
+          style={styles.likeBtn}
+          activeOpacity={0.85}
+          disabled={liking}
+          onPress={onLike}
+        >
+          <Icon
+            name={match.isLiked ? 'heart' : 'heart-outline'}
+            size={fs(16)}
+            color={match.isLiked ? Colors.redish : Colors.primary}
+          />
         </TouchableOpacity>
       </View>
     </View>

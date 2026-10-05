@@ -80,6 +80,15 @@ const filterSlice = createSlice({
       state.fallbackUsed = false;
       state.hasExactMatches = false;
     },
+    setFilterMatchLiked: (
+      state,
+      action: PayloadAction<{ id: string; isLiked: boolean }>,
+    ) => {
+      const match = state.results.find(item => item.id === action.payload.id);
+      if (match) {
+        match.isLiked = action.payload.isLiked;
+      }
+    },
     clearFilter: () => initialState,
   },
 });
@@ -87,6 +96,7 @@ const filterSlice = createSlice({
 export const {
   setFilterForm,
   setFilterResults,
+  setFilterMatchLiked,
   clearFilterResults,
   clearFilter,
 } = filterSlice.actions;
