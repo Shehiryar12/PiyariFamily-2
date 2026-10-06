@@ -1,6 +1,5 @@
 import { Api } from '../Api';
 import { getApiErrorMessage } from '../handleApiError';
-import { hydrateMatchImages } from '../hydrateMatchImages';
 import { isApiSuccess } from '../types';
 import {
   buildMatchSearchParams,
@@ -236,7 +235,7 @@ export const searchMatches = async (
   );
 
   return {
-    matches: await hydrateMatchImages(filtered),
+    matches: filtered,
     emptyMessage: isUserSearch ? 'No exact matches found' : 'No matches found',
     setup,
     isUserSearch,

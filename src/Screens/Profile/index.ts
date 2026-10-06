@@ -8,6 +8,8 @@ export { default as ViewProfileRequestsScreen } from './ViewProfileRequestsScree
 export { default as RequestHistoryScreen } from './RequestHistoryScreen';
 export { default as ApprovedPhotoAccessScreen } from './ApprovedPhotoAccessScreen';
 export { default as ViewProfileGalleryScreen } from './ViewProfileGalleryScreen';
+export { default as HelpCenterScreen } from './HelpCenterScreen';
+export { default as ContactSupportScreen } from './ContactSupportScreen';
 export { default as ChangePasswordScreen } from './ChangePasswordScreen';
 export { default as AccountOptionsScreen } from './AccountOptionsScreen';
 export { default as AccountDeactivatedScreen } from './AccountDeactivatedScreen';

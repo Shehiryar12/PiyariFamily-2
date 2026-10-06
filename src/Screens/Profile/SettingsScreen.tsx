@@ -505,12 +505,14 @@ const SettingsScreen = () => {
             icon="help-circle-outline"
             title={Strings.helpCenter}
             subtitle={Strings.helpCenterSubtitle}
+            onPress={() => navigation.navigate('HelpCenter')}
           />
           <View style={styles.itemDivider} />
           <SettingItem
             icon="message-text-outline"
             title={Strings.contactSupport}
             subtitle={Strings.contactSupportSubtitle}
+            onPress={() => navigation.navigate('ContactSupport')}
           />
           <View style={styles.itemDivider} />
           <SettingItem

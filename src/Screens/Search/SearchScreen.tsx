@@ -13,6 +13,7 @@ import {
   resolveUserCity,
   Api,
   getApiErrorMessage,
+  hydrateMatchImages,
   saveProfileCache,
   type FilterQuickOption,
   type FilterSetupData,
@@ -95,9 +96,11 @@ const SearchScreen = () => {
   const inFlightKeyRef = useRef('');
   const catalogsRef = useRef(searchCatalogs);
   const quickFiltersRef = useRef(quickFilters);
+  const matchesRef = useRef(suggestedMatches);
 
   catalogsRef.current = searchCatalogs;
   quickFiltersRef.current = quickFilters;
+  matchesRef.current = suggestedMatches;
 
   const comingFromFilter = Boolean(route.params?.fromFilter);
   const appliedQuickFilterIds = Object.entries(
@@ -163,7 +166,9 @@ const SearchScreen = () => {
 
       const generation = ++searchGenerationRef.current;
       inFlightKeyRef.current = requestKey;
-      setLoading(true);
+      if (!matchesRef.current.length) {
+        setLoading(true);
+      }
 
       try {
         const result = await searchMatches({
@@ -189,9 +194,19 @@ const SearchScreen = () => {
         setEmptyMessage(
           result.isUserSearch ? Strings.noExactMatchesFound : result.emptyMessage,
         );
+        setLoading(false);
 
         if (trimmedQuery.length >= MIN_SEARCH_LENGTH || quickFilter) {
           dispatch(clearFilterResults());
+        }
+
+        try {
+          const hydrated = await hydrateMatchImages(result.matches);
+          if (generation !== searchGenerationRef.current) {
+            return;
+          }
+          setSuggestedMatches(hydrated);
+        } catch {
         }
       } catch (error) {
         if (generation !== searchGenerationRef.current) {

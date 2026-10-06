@@ -1,7 +1,7 @@
 import { ImageSourcePropType } from 'react-native';
 import { Images } from '../Assets';
 import { Api } from './Api';
-import { mapPhotoGallery } from './mappers/photoGalleryMapper';
+import { mapPhotoGallery, type PhotoGalleryData } from './mappers/photoGalleryMapper';
 import { applyViewerPhotoPrivacy } from './photoPrivacy';
 
 type MatchWithImage = {
@@ -31,7 +31,14 @@ export const getImageCacheKey = (
   return fallback;
 };
 
+const galleryCache = new Map<string, PhotoGalleryData>();
+
 const withHydratedImage = async <T extends MatchWithImage>(item: T): Promise<T> => {
+  const cached = galleryCache.get(item.id);
+  if (cached) {
+    return applyViewerPhotoPrivacy(item, cached);
+  }
+
   try {
     const res = await Api.getProfilePhotoGallery(item.id);
     const gallery = mapPhotoGallery(res?.data, item.id);
@@ -43,6 +50,7 @@ const withHydratedImage = async <T extends MatchWithImage>(item: T): Promise<T> 
       res?.status == 200 ||
       res?.status == 201
     ) {
+      galleryCache.set(item.id, gallery);
       return applyViewerPhotoPrivacy(item, gallery);
     }
   } catch {
@@ -85,4 +93,4 @@ const runWithLimit = async <T,>(
 
 export const hydrateMatchImages = async <T extends MatchWithImage>(
   items: T[],
-) => runWithLimit(items, withHydratedImage, 3);
+) => runWithLimit(items, withHydratedImage, 2);

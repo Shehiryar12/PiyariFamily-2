@@ -3,14 +3,16 @@ import { ImageSourcePropType } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   AccountOptionsScreen,
+  ApprovedPhotoAccessScreen,
   ChangePasswordScreen,
+  ContactSupportScreen,
   EditProfileScreen,
+  HelpCenterScreen,
   MyRewardsScreen,
   NotificationsScreen,
+  RequestHistoryScreen,
   ViewProfileGalleryScreen,
   ViewProfileRequestsScreen,
-  RequestHistoryScreen,
-  ApprovedPhotoAccessScreen,
   ProfileVerifiedScreen,
   ReferralProgramScreen,
   SettingsScreen,
@@ -39,6 +41,8 @@ export type ProfileStackParamList = {
   ViewProfileRequests: undefined;
   RequestHistory: undefined;
   ApprovedPhotoAccess: undefined;
+  HelpCenter: undefined;
+  ContactSupport: undefined;
   ViewProfileGallery: {
     userId?: string;
     name: string;
@@ -104,6 +108,8 @@ const ProfileStackNavigator = () => {
         name="ApprovedPhotoAccess"
         component={ApprovedPhotoAccessScreen}
       />
+      <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
+      <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
       <Stack.Screen
         name="ViewProfileGallery"
         component={ViewProfileGalleryScreen}

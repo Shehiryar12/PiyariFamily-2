@@ -219,7 +219,7 @@ const AccountOptionsScreen = () => {
         <TouchableOpacity
           style={styles.supportBtn}
           activeOpacity={0.88}
-          onPress={() => Toast.show('Opening support')}
+          onPress={() => navigation.navigate('ContactSupport')}
         >
           <Icon
             name="message-text-outline"
