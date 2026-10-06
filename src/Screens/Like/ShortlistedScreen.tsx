@@ -21,8 +21,8 @@ import {
   extractShortlistProfiles,
   getApiErrorMessage,
   getImageCacheKey,
-  hydrateMatchImages,
   isApiSuccess,
+  isRateLimitError,
   mapShortlistProfiles,
   pickShortlistTotal,
   type ShortlistTab,
@@ -68,6 +68,8 @@ const ShortlistedScreen = () => {
 
   const profiles = bucket.profiles;
   const total = bucket.total;
+  const lastFetchAtRef = useRef(0);
+  const fetchingRef = useRef(false);
   const hasCacheRef = useRef(
     cachedLiked.profiles.length > 0 || cachedLikedMe.profiles.length > 0,
   );
@@ -80,6 +82,10 @@ const ShortlistedScreen = () => {
       const body = res?.data;
       const ok = isApiSuccess(res?.status, body?.success);
       if (!ok) {
+        const message = body?.message ?? 'Failed to load shortlisted profiles';
+        if (isRateLimitError(undefined, message)) {
+          return;
+        }
         dispatch(
           setShortlistData({
             tab,
@@ -87,15 +93,13 @@ const ShortlistedScreen = () => {
             total: 0,
           }),
         );
-        Toast.show(
-          body?.message ?? 'Failed to load shortlisted profiles',
-          Toast.LONG,
-        );
+        Toast.show(message, Toast.LONG);
         return;
       }
 
-      const rawProfiles = extractShortlistProfiles(body, tab);
-      const mapped = await hydrateMatchImages(mapShortlistProfiles(rawProfiles));
+      const mapped = mapShortlistProfiles(
+        extractShortlistProfiles(body, tab),
+      );
 
       dispatch(
         setShortlistData({
@@ -105,6 +109,9 @@ const ShortlistedScreen = () => {
         }),
       );
     } catch (error) {
+      if (isRateLimitError(error)) {
+        return;
+      }
       dispatch(
         setShortlistData({
           tab,
@@ -120,23 +127,32 @@ const ShortlistedScreen = () => {
   }, [dispatch]);
 
   const fetchShortlist = useCallback(async () => {
+    const now = Date.now();
+    if (fetchingRef.current) {
+      return;
+    }
+    if (hasCacheRef.current && now - lastFetchAtRef.current < 15000) {
+      return;
+    }
+
+    fetchingRef.current = true;
     if (!hasCacheRef.current) {
       setLoading(true);
     }
 
     try {
-      await Promise.all([
-        loadShortlistTab('liked_me'),
-        loadShortlistTab('i_liked'),
-      ]);
+      await loadShortlistTab('i_liked');
+      await loadShortlistTab('liked_me');
+      lastFetchAtRef.current = Date.now();
     } catch (error) {
-      if (!hasCacheRef.current) {
+      if (!hasCacheRef.current && !isRateLimitError(error)) {
         Toast.show(
           getApiErrorMessage(error, 'Failed to load shortlisted profiles'),
           Toast.LONG,
         );
       }
     } finally {
+      fetchingRef.current = false;
       setLoading(false);
     }
   }, [loadShortlistTab]);
@@ -164,7 +180,9 @@ const ShortlistedScreen = () => {
 
       Toast.show(res?.message ?? 'Failed to unlike profile', Toast.LONG);
     } catch (error) {
-      Toast.show(getApiErrorMessage(error, 'Failed to unlike profile'), Toast.LONG);
+      if (!isRateLimitError(error)) {
+        Toast.show(getApiErrorMessage(error, 'Failed to unlike profile'), Toast.LONG);
+      }
     } finally {
       setUnlikingId(null);
     }

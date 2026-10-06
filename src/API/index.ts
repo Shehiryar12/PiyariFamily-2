@@ -7,7 +7,7 @@ export { apiClient, axiosInstance } from './apiClient';
 export { API_CONFIG } from './config';
 export { resolveMediaUrl, toRemoteImageSource } from './mediaUrl';
 export { ENDPOINTS } from './endpoints';
-export { getApiErrorMessage } from './handleApiError';
+export { getApiErrorMessage, isRateLimitError } from './handleApiError';
 export {
   OTP_RESEND_COOLDOWN_SECONDS,
   getOtpCooldownMessage,

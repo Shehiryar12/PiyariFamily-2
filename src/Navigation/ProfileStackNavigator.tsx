@@ -10,6 +10,7 @@ import {
   ViewProfileGalleryScreen,
   ViewProfileRequestsScreen,
   RequestHistoryScreen,
+  ApprovedPhotoAccessScreen,
   ProfileVerifiedScreen,
   ReferralProgramScreen,
   SettingsScreen,
@@ -37,6 +38,7 @@ export type ProfileStackParamList = {
   Notifications: undefined;
   ViewProfileRequests: undefined;
   RequestHistory: undefined;
+  ApprovedPhotoAccess: undefined;
   ViewProfileGallery: {
     userId?: string;
     name: string;
@@ -98,6 +100,10 @@ const ProfileStackNavigator = () => {
         component={ViewProfileRequestsScreen}
       />
       <Stack.Screen name="RequestHistory" component={RequestHistoryScreen} />
+      <Stack.Screen
+        name="ApprovedPhotoAccess"
+        component={ApprovedPhotoAccessScreen}
+      />
       <Stack.Screen
         name="ViewProfileGallery"
         component={ViewProfileGalleryScreen}

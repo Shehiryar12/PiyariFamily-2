@@ -459,6 +459,13 @@ const SettingsScreen = () => {
             subtitle={Strings.requestHistorySubtitle}
             onPress={() => navigation.navigate('RequestHistory')}
           />
+          <View style={styles.itemDivider} />
+          <SettingItem
+            icon="account-cancel-outline"
+            title={Strings.approvedPhotoAccess}
+            subtitle={Strings.approvedPhotoAccessSubtitle}
+            onPress={() => navigation.navigate('ApprovedPhotoAccess')}
+          />
         </View>
 
         <Text style={styles.sectionLabel}>{Strings.securitySection}</Text>

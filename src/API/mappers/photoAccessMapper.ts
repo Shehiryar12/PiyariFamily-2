@@ -457,7 +457,8 @@ export const mapPhotoAccessStatus = (
     key === 'rejected' ||
     key === 'declined' ||
     key === 'denied' ||
-    key === 'reject'
+    key === 'reject' ||
+    key === 'revoked'
   ) {
     return 'declined';
   }

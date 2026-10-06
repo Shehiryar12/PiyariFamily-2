@@ -422,6 +422,14 @@ export const Api = {
     );
   },
 
+  revokePhotoAccessRequest: async (requestId: string) => {
+    const photoAccessRequestId = String(requestId ?? '').trim();
+
+    return apiClient.delete<PhotoAccessRespondResponse>(
+      ENDPOINTS.photoAccessById(photoAccessRequestId),
+    );
+  },
+
   getProfilePhotoGallery: (userId: string) =>
     apiClient.get<PhotoGalleryResponse>(
       `${ENDPOINTS.PROFILE}/${userId}/photo-gallery`,

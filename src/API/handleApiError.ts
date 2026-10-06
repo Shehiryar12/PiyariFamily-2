@@ -1,6 +1,18 @@
 import { AxiosError } from 'axios';
 import type { ApiErrorResponse } from './types';
 
+export const isRateLimitError = (error?: unknown | null, message?: string) => {
+  const text = `${
+    message ?? (error ? getApiErrorMessage(error, '') : '')
+  }`.toLowerCase();
+
+  if (text.includes('too many')) {
+    return true;
+  }
+
+  return error instanceof AxiosError && error.response?.status === 429;
+};
+
 export const getApiErrorMessage = (
   error: unknown,
   fallback = 'Something went wrong. Please try again.',

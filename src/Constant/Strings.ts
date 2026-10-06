@@ -415,6 +415,17 @@ export const Strings = {
   requestHistoryError: 'Failed to load request history',
   requestHistoryAccepted: 'Accepted',
   requestHistoryRejected: 'Rejected',
+  approvedPhotoAccess: 'Approved Photo Access',
+  approvedPhotoAccessSubtitle: 'Block people you allowed to see your photos',
+  approvedPhotoAccessEmpty: 'No approved photo access',
+  approvedPhotoAccessEmptyHint:
+    'People you approve will appear here. Block them anytime to hide your photos again.',
+  approvedPhotoAccessError: 'Failed to load approved photo access',
+  blockPhotoAccess: 'Block',
+  blockPhotoAccessConfirmTitle: 'Block photo access?',
+  blockPhotoAccessConfirmMessage:
+    'This person will no longer be able to see your hidden photos.',
+  photoAccessRevoked: 'Photo access has been revoked',
   termsAndConditions: 'Terms & Conditions',
   termsSubtitle: 'Please read our terms before using the service.',
   rateTheApp: 'Rate the App',

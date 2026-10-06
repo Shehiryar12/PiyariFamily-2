@@ -37,6 +37,8 @@ export const ENDPOINTS = {
     `/photo-access/${userId}/request`,
   photoAccessRespond: (requestId: string) =>
     `/photo-access-requests/${requestId}/respond`,
+  photoAccessById: (requestId: string) =>
+    `/photo-access-requests/${requestId}`,
   NOTIFICATIONS: '/notifications',
   NOTIFICATIONS_READ_ALL: '/notifications/read-all',
   NOTIFICATIONS_CLEAR_ALL: '/notifications/clear-all',
