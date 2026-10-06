@@ -276,7 +276,7 @@ export const Strings = {
   photoGalleryAccessDenied: 'You do not have access to these photos',
   requestPhotoAccess: 'Request Photo Access',
   photoAccessRequestPrompt:
-    'Send a request to view this profile picture? It stays hidden until they accept.',
+    'Send a request to view these hidden photos? They stay hidden until this person accepts, and only you will see them.',
   photoAccessRequested: 'Photo access request sent',
   photoAccessRequestSent: 'Request sent',
   photoAccessRequestError: 'Failed to send photo access request',
@@ -367,9 +367,15 @@ export const Strings = {
   registeredBadge: 'Registered',
   rewardRedeemed: 'Reward redeemed successfully',
 
-  profilePhotosVisibility: 'PROFILE PHOTOS VISIBILITY',
+  profilePhotosVisibility: 'PHOTO PRIVACY',
   profilePicture: 'Profile Picture',
   additionalPhotos: 'Additional Photos',
+  hideProfilePicture: 'Hide Profile Picture',
+  hideAdditionalPhotos: 'Hide Additional Photos',
+  hideProfilePictureHint:
+    'Others must request access. Only people you approve can see it.',
+  hideAdditionalPhotosHint:
+    'Others must request access. Only people you approve can see it.',
   accountSection: 'ACCOUNT',
   updatePersonalDetails: 'Update your personal details',
   verifyYourProfile: 'Verify Your Profile',

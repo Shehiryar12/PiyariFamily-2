@@ -1,12 +1,15 @@
 import { ImageSourcePropType } from 'react-native';
 import { Images } from '../Assets';
 import { Api } from './Api';
-import { mapMatchProfileDetail } from './mappers/matchMapper';
+import { mapPhotoGallery } from './mappers/photoGalleryMapper';
+import { applyViewerPhotoPrivacy } from './photoPrivacy';
 
 type MatchWithImage = {
   id: string;
   image: ImageSourcePropType;
   pictureHidden?: boolean;
+  additionalPhotosHidden?: boolean;
+  photosNeedAccess?: boolean;
 };
 
 export const isRemoteImage = (image: ImageSourcePropType) =>
@@ -30,25 +33,20 @@ export const getImageCacheKey = (
 
 const withHydratedImage = async <T extends MatchWithImage>(item: T): Promise<T> => {
   try {
-    const res = await Api.getMatchProfile(item.id);
-    const ok = res?.status == 200 || res?.status == 201;
+    const res = await Api.getProfilePhotoGallery(item.id);
+    const gallery = mapPhotoGallery(res?.data, item.id);
 
-    if (ok) {
-      const detail = mapMatchProfileDetail(res.data, item.id, {
-        image: item.image,
-        pictureHidden: item.pictureHidden,
-      });
-
-      if (detail.pictureHidden) {
-        return { ...item, image: Images.hiddenProfile, pictureHidden: true };
-      }
-
-      if (isRemoteImage(detail.image)) {
-        return { ...item, image: detail.image, pictureHidden: false };
-      }
+    if (
+      typeof res?.data?.visibility !== 'undefined' ||
+      typeof res?.data?.access_granted !== 'undefined' ||
+      Array.isArray(res?.data?.photos) ||
+      res?.status == 200 ||
+      res?.status == 201
+    ) {
+      return applyViewerPhotoPrivacy(item, gallery);
     }
   } catch {
-    // Keep the list image when the profile check fails.
+    // Keep the list image when the gallery check fails.
   }
 
   if (item.pictureHidden) {

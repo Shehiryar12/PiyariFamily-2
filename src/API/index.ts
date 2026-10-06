@@ -2,6 +2,7 @@ export { Api } from './Api';
 export { refreshAccountStatus, pickRemoteAccountStatus } from './refreshAccountStatus';
 export type { AccountRefreshResult } from './refreshAccountStatus';
 export { hydrateMatchImages, getImageCacheKey, isRemoteImage } from './hydrateMatchImages';
+export { applyViewerPhotoPrivacy } from './photoPrivacy';
 export { apiClient, axiosInstance } from './apiClient';
 export { API_CONFIG } from './config';
 export { resolveMediaUrl, toRemoteImageSource } from './mediaUrl';
@@ -144,6 +145,7 @@ export {
   mapPhotoAccessPayload,
   mapPhotoAccessRequests,
   mapPhotoAccessStatus,
+  mergePhotoAccessResponses,
   overlayPhotoAccessDetails,
   pickPendingPhotoAccessCount,
   resolvePhotoAccessLocation,

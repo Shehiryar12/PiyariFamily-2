@@ -154,28 +154,35 @@ const HomeScreen = () => {
         greetingParts.title && !greetingHasEmail(greetingParts.title)
           ? greetingParts.title
           : fallbackGreeting;
-      const homePayload = applyHomePayload(
-        mapped.featuredMatches,
-        mapped.suggestedMatches,
-        title,
-        greetingParts.subtitle || Strings.homeSubtitle,
-        mapped.totalMatches,
-      );
 
       try {
         const [hydratedFeatured, hydratedSuggested] = await Promise.all([
           hydrateMatchImages(mapped.featuredMatches),
           hydrateMatchImages(mapped.suggestedMatches),
         ]);
-
-        dispatch(
-          setHomeMatches({
-            ...homePayload,
-            featuredMatches: hydratedFeatured,
-            suggestedMatches: hydratedSuggested,
-          }),
+        applyHomePayload(
+          hydratedFeatured,
+          hydratedSuggested,
+          title,
+          greetingParts.subtitle || Strings.homeSubtitle,
+          mapped.totalMatches,
         );
-      } catch (hydrateError) {
+      } catch {
+        applyHomePayload(
+          mapped.featuredMatches.map(item =>
+            item.pictureHidden
+              ? { ...item, image: Images.hiddenProfile, pictureHidden: true }
+              : item,
+          ),
+          mapped.suggestedMatches.map(item =>
+            item.pictureHidden
+              ? { ...item, image: Images.hiddenProfile, pictureHidden: true }
+              : item,
+          ),
+          title,
+          greetingParts.subtitle || Strings.homeSubtitle,
+          mapped.totalMatches,
+        );
       }
     } catch (error) {
       const axiosError = error as AxiosError<ApiErrorResponse>;

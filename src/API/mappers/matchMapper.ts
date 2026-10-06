@@ -313,13 +313,16 @@ const PICTURE_VISIBILITY_KEYS = [
   'profile_picture_visible',
   'profilePictureVisible',
   'is_profile_photo_visible',
-  'photo_visible',
-  'is_photo_visible',
 ];
-const VIEWER_ACCESS_KEYS = [
-  'can_view_profile_photo',
+const GENERAL_ACCESS_KEYS = [
   'photo_access_granted',
   'has_photo_access',
+];
+const PROFILE_ACCESS_KEYS = ['can_view_profile_photo'];
+const ADDITIONAL_ACCESS_KEYS = [
+  'can_view_additional_photos',
+  'additional_photo_access_granted',
+  'has_additional_photo_access',
 ];
 const ACCEPTED_PHOTO_ACCESS = new Set([
   'accepted',
@@ -330,8 +333,6 @@ const ACCEPTED_PHOTO_ACCESS = new Set([
 const ADDITIONAL_VISIBILITY_KEYS = [
   'additional_photos_visible',
   'additionalPhotosVisible',
-  'gallery_visible',
-  'photos_visible',
 ];
 const PICTURE_HIDDEN_KEYS = [
   'profile_photo_hidden',
@@ -370,18 +371,18 @@ export const resolveMatchPhotoVisibility = (item?: MatchApiItem | null) => {
   }
 
   const sources: unknown[] = [
-    item,
     item.visibility,
     item.photo_visibility,
-    (item as { privacy?: unknown }).privacy,
     (item as { photo_privacy?: unknown }).photo_privacy,
+    (item as { privacy?: unknown }).privacy,
     (item as { settings?: unknown }).settings,
-    item.user,
     item.user?.visibility,
     item.user?.photo_visibility,
-    item.profile,
     item.profile?.visibility,
     item.profile?.photo_visibility,
+    item,
+    item.user,
+    item.profile,
   ];
 
   let pictureVisible: boolean | undefined;
@@ -412,11 +413,7 @@ export const resolveMatchPhotoVisibility = (item?: MatchApiItem | null) => {
     }
   });
 
-  const viewerGranted = sources.some(source => {
-    if (pickVisibilityFromSource(source, VIEWER_ACCESS_KEYS) === true) {
-      return true;
-    }
-
+  const statusGranted = (source: unknown) => {
     if (!isPlainObject(source)) {
       return false;
     }
@@ -424,13 +421,29 @@ export const resolveMatchPhotoVisibility = (item?: MatchApiItem | null) => {
     const status = [
       source.photo_access_status,
       source.photo_request_status,
+      source.access_status,
     ].find(value => typeof value === 'string' && value.trim());
 
     return ACCEPTED_PHOTO_ACCESS.has(String(status ?? '').trim().toLowerCase());
-  });
+  };
+  const grants = (source: unknown, keys: string[]) =>
+    pickVisibilityFromSource(source, keys) === true;
+  const generalGrant = sources.some(
+    source => grants(source, GENERAL_ACCESS_KEYS) || statusGranted(source),
+  );
+  const profileGrant =
+    generalGrant ||
+    sources.some(source => grants(source, PROFILE_ACCESS_KEYS));
+  const additionalGrant =
+    generalGrant ||
+    sources.some(source => grants(source, ADDITIONAL_ACCESS_KEYS));
 
-  if (viewerGranted) {
+  if (profileGrant) {
     pictureVisible = true;
+  }
+
+  if (additionalGrant) {
+    additionalVisible = true;
   }
 
   return { pictureVisible, additionalVisible };
@@ -1579,16 +1592,18 @@ export const mapMatchProfileDetail = (
   );
   const visibility = resolveMatchPhotoVisibility(profile);
   const resolvedImage = resolveProfileImage(profile);
-  const image =
-    preview?.pictureHidden || visibility.pictureVisible === false
-      ? Images.hiddenProfile
-      : visibility.pictureVisible === undefined &&
-          preview?.image &&
-          !isRemoteProfileImage(preview.image)
-        ? preview.image
-        : response
-          ? resolvedImage
-          : preview?.image ?? resolvedImage;
+  const pictureIsHidden =
+    visibility.pictureVisible === false ||
+    (visibility.pictureVisible === undefined && Boolean(preview?.pictureHidden));
+  const image = pictureIsHidden
+    ? Images.hiddenProfile
+    : visibility.pictureVisible === undefined &&
+        preview?.image &&
+        !isRemoteProfileImage(preview.image)
+      ? preview.image
+      : response
+        ? resolvedImage
+        : preview?.image ?? resolvedImage;
   const age = pickNumber(profile.age) || preview?.age || 0;
   const city =
     pickString(profile.city) ||
@@ -1679,8 +1694,7 @@ export const mapMatchProfileDetail = (
       : [],
     isLiked: [profile.is_liked, profile.is_like, profile.liked].some(isTruthyFlag),
     photosNeedAccess: profileNeedsPhotoAccess(profile, image),
-    pictureHidden:
-      Boolean(preview?.pictureHidden) || visibility.pictureVisible === false,
+    pictureHidden: pictureIsHidden,
     additionalPhotosHidden: visibility.additionalVisible === false,
   };
 };
@@ -1693,7 +1707,7 @@ export const profileNeedsPhotoAccess = (
     resolveMatchPhotoVisibility(profile);
 
   if (pictureVisible === false || additionalVisible === false) {
-    return false;
+    return true;
   }
 
   if (isRemoteProfileImage(displayedImage)) {

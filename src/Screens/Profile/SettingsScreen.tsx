@@ -170,23 +170,7 @@ const SettingsScreen = () => {
         profile_photo_visible: pending.profilePictureVisible,
         additional_photos_visible: pending.additionalPhotosVisible,
       });
-
       if (isApiSuccess(res?.status, res?.success)) {
-        const flags: PhotoVisibilityFlags =
-          res.data && typeof res.data === 'object' ? res.data : res;
-        visibilityRetryRef.current = 0;
-        savedVisibilityRef.current = pending;
-        applyProfile(
-          saveProfileCache({
-            ...store.getState().profile.profile,
-            profile_photo_visible:
-              parseVisibilityFlag(flags?.profile_photo_visible) ??
-              pending.profilePictureVisible,
-            additional_photos_visible:
-              parseVisibilityFlag(flags?.additional_photos_visible) ??
-              pending.additionalPhotosVisible,
-          }),
-        );
         Toast.show(res?.message || 'Photo visibility updated', Toast.LONG);
       } else if (
         `${res?.message ?? ''}`.toLowerCase().includes('too many') &&
@@ -400,35 +384,47 @@ const SettingsScreen = () => {
         </Text>
         <View style={styles.toggleCard}>
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>{Strings.profilePicture}</Text>
+            <View style={styles.toggleCopy}>
+              <Text style={styles.toggleLabel}>{Strings.hideProfilePicture}</Text>
+              <Text style={styles.toggleHint}>
+                {Strings.hideProfilePictureHint}
+              </Text>
+            </View>
             <Switch
-              value={profilePictureVisible}
-              onValueChange={value =>
-                persistPhotoVisibility(value, additionalPhotosVisible)
+              value={!profilePictureVisible}
+              onValueChange={hidden =>
+                persistPhotoVisibility(!hidden, additionalPhotosVisible)
               }
               trackColor={{
                 false: Colors.divider,
                 true: Colors.focusBorder,
               }}
               thumbColor={
-                profilePictureVisible ? Colors.primary : Colors.white
+                !profilePictureVisible ? Colors.primary : Colors.white
               }
             />
           </View>
           <View style={styles.toggleDivider} />
           <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>{Strings.additionalPhotos}</Text>
+            <View style={styles.toggleCopy}>
+              <Text style={styles.toggleLabel}>
+                {Strings.hideAdditionalPhotos}
+              </Text>
+              <Text style={styles.toggleHint}>
+                {Strings.hideAdditionalPhotosHint}
+              </Text>
+            </View>
             <Switch
-              value={additionalPhotosVisible}
-              onValueChange={value =>
-                persistPhotoVisibility(profilePictureVisible, value)
+              value={!additionalPhotosVisible}
+              onValueChange={hidden =>
+                persistPhotoVisibility(profilePictureVisible, !hidden)
               }
               trackColor={{
                 false: Colors.divider,
                 true: Colors.focusBorder,
               }}
               thumbColor={
-                additionalPhotosVisible ? Colors.primary : Colors.white
+                !additionalPhotosVisible ? Colors.primary : Colors.white
               }
             />
           </View>
@@ -730,10 +726,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp('4%'),
     paddingVertical: hp('1.4%'),
   },
+  toggleCopy: {
+    flex: 1,
+    marginRight: wp('3%'),
+  },
   toggleLabel: {
     fontSize: FontSizes.body,
     fontFamily: Fonts.medium,
     color: Colors.primary,
+  },
+  toggleHint: {
+    fontSize: fs(11),
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+    marginTop: hp('0.3%'),
+    lineHeight: hp('1.8%'),
   },
   toggleDivider: {
     height: 1,

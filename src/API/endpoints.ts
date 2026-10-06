@@ -33,6 +33,10 @@ export const ENDPOINTS = {
   REFERRALS_REDEEM: '/referrals/redeem',
   PHOTO_ACCESS: '/photo-access',
   PHOTO_ACCESS_REQUESTS: '/photo-access-requests',
+  photoAccessUserRequest: (userId: string) =>
+    `/photo-access/${userId}/request`,
+  photoAccessRespond: (requestId: string) =>
+    `/photo-access-requests/${requestId}/respond`,
   NOTIFICATIONS: '/notifications',
   NOTIFICATIONS_READ_ALL: '/notifications/read-all',
   NOTIFICATIONS_CLEAR_ALL: '/notifications/clear-all',

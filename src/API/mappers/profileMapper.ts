@@ -182,8 +182,6 @@ const mergeVisibilityFlags = (
     'is_profile_photo_visible',
     'photo_visible',
     'is_photo_visible',
-    'can_view_profile_photo',
-    'can_view_photos',
   ];
   const additionalKeys = [
     'additional_photos_visible',

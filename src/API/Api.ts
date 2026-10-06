@@ -82,9 +82,6 @@ const isMissingEndpoint = (error: unknown) => {
   );
 };
 
-const isRetryablePhotoAccessRequest = (error: unknown) =>
-  isMethodNotAllowed(error) || isMissingEndpoint(error);
-
 type UpdateProfileResponse = MessageResponse & {
   user?: ProfileApiData;
 };
@@ -312,8 +309,12 @@ export const Api = {
     const { status, data } = await apiClient.postForm<PhotoVisibilityResponse>(
       ENDPOINTS.PROFILE_PHOTO_VISIBILITY,
       {
-        profile_photo_visible: payload.profile_photo_visible ? 1 : 0,
-        additional_photos_visible: payload.additional_photos_visible ? 1 : 0,
+        profile_photo_visible: payload.profile_photo_visible ? '1' : '0',
+        additional_photos_visible: payload.additional_photos_visible ? '1' : '0',
+        profile_photo_hidden: payload.profile_photo_visible ? '0' : '1',
+        additional_photos_hidden: payload.additional_photos_visible ? '0' : '1',
+        hide_profile_photo: payload.profile_photo_visible ? '0' : '1',
+        hide_additional_photos: payload.additional_photos_visible ? '0' : '1',
       },
     );
 
@@ -387,48 +388,21 @@ export const Api = {
       reward_type: rewardType,
     }),
 
-  getPhotoAccessRequests: async () => {
-    const incoming = await apiClient.get<PhotoAccessRequestsResponse>(
+  getPhotoAccessRequests: async (type?: 'incoming' | 'outgoing') => {
+    return apiClient.get<PhotoAccessRequestsResponse>(
       ENDPOINTS.PHOTO_ACCESS_REQUESTS,
-      { params: { type: 'incoming' } },
+      type ? { params: { type } } : undefined,
     );
-
-    console.log(
-      'GET /photo-access-requests incoming:',
-      JSON.stringify(incoming.data ?? null, null, 2),
-    );
-
-    return incoming;
   },
 
   requestPhotoAccess: async (userId: string) => {
     const targetUserId = String(userId ?? '').trim();
-    const payload = {
-      user_id: targetUserId,
-      profile_id: targetUserId,
-      to_user_id: targetUserId,
-    };
-
-    console.log(
-      'POST /photo-access-requests target user id:',
-      targetUserId,
-      payload,
-    );
-
-    try {
-      return await apiClient.postForm<PhotoAccessUserRequestResponse>(
-        ENDPOINTS.PHOTO_ACCESS_REQUESTS,
-        payload,
-      );
-    } catch (error) {
-      if (!isRetryablePhotoAccessRequest(error)) {
-        throw error;
-      }
-    }
 
     return apiClient.postForm<PhotoAccessUserRequestResponse>(
-      `${ENDPOINTS.PHOTO_ACCESS}/${targetUserId}/request`,
-      payload,
+      ENDPOINTS.photoAccessUserRequest(targetUserId),
+      {
+        user_id: targetUserId,
+      },
     );
   },
 
@@ -436,47 +410,16 @@ export const Api = {
     requestId: string,
     action: PhotoAccessAction,
   ) => {
-    const url = `${ENDPOINTS.PHOTO_ACCESS_REQUESTS}/${requestId}/respond`;
-    const actionValues =
-      action === 'approve'
-        ? ['approve', 'accept', 'approved', 'accepted']
-        : ['reject', 'decline', 'rejected', 'denied'];
+    const photoAccessRequestId = String(requestId ?? '').trim();
+    const approved = action === 'approve';
 
-    let lastError: unknown;
-
-    for (const value of actionValues) {
-      try {
-        const res = await apiClient.postForm<PhotoAccessRespondResponse>(url, {
-          action: value,
-        });
-
-        if (
-          isApiSuccess(res.status, res.data?.success) ||
-          res.data?.success === true ||
-          res.data?.success == 200
-        ) {
-          return res;
-        }
-
-        lastError = res;
-      } catch (error) {
-        lastError = error;
-        const status =
-          error instanceof AxiosError ? error.response?.status : undefined;
-
-        if (status === 403 || status === 422) {
-          continue;
-        }
-
-        throw error;
-      }
-    }
-
-    if (lastError) {
-      throw lastError;
-    }
-
-    throw new Error('Failed to respond to photo access request');
+    return apiClient.postForm<PhotoAccessRespondResponse>(
+      ENDPOINTS.photoAccessRespond(photoAccessRequestId),
+      {
+        action: approved ? 'approve' : 'reject',
+        status: approved ? 'approved' : 'rejected',
+      },
+    );
   },
 
   getProfilePhotoGallery: (userId: string) =>

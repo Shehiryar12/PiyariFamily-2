@@ -604,7 +604,7 @@ export const mapPhotoAccessRequestItem = (
   );
   const age = pickNumber(profile.age);
   const location = resolvePhotoAccessLocation(profile, safeItem);
-  const id = safeItem.request_id ?? safeItem.id ?? index;
+  const id = safeItem.id ?? safeItem.request_id ?? index;
   const profileId = profile.id ?? profile.user_id ?? '';
   const verified = profile.is_verified;
 

@@ -125,7 +125,7 @@ const ViewProfileGalleryScreen = () => {
       if (galleryOk) {
         const gallery = mapPhotoGallery(res?.data, userId, previewName);
         setName(gallery.name || previewName);
-        setHiddenByOwner(gallery.hiddenByOwner && !gallery.accessGranted);
+        setHiddenByOwner(gallery.hiddenByOwner);
         setAccessGranted(gallery.accessGranted);
         setPhotos(gallery.photos);
         const hiddenMessage = gallery.hiddenByOwner
@@ -173,7 +173,6 @@ const ViewProfileGalleryScreen = () => {
     setRequesting(true);
 
     try {
-      console.log('Request photo access for user id:', userId);
       const res = await Api.requestPhotoAccess(userId);
 
       if (isApiSuccess(res?.status, res?.data?.success)) {
@@ -242,7 +241,7 @@ const ViewProfileGalleryScreen = () => {
             />
           )}
           <Text style={styles.emptyText}>{emptyMessage}</Text>
-          {!accessGranted && userId ? (
+          {hiddenByOwner && userId ? (
             <TouchableOpacity
               style={styles.requestBtn}
               activeOpacity={0.85}
@@ -291,6 +290,24 @@ const ViewProfileGalleryScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
+          {hiddenByOwner && userId ? (
+            <TouchableOpacity
+              style={styles.requestBtn}
+              activeOpacity={0.85}
+              onPress={requestPhotoAccess}
+              disabled={requesting || requestSent}
+            >
+              {requesting ? (
+                <ActivityIndicator size="small" color={Colors.white} />
+              ) : (
+                <Text style={styles.requestBtnText}>
+                  {requestSent
+                    ? Strings.photoAccessRequestSent
+                    : Strings.requestPhotoAccess}
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       )}
 
@@ -414,6 +431,7 @@ const styles = StyleSheet.create({
   },
   requestBtn: {
     marginTop: hp('1.6%'),
+    alignSelf: 'center',
     minWidth: wp('58%'),
     height: hp('5.4%'),
     paddingHorizontal: wp('5%'),

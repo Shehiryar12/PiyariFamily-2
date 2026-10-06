@@ -62,22 +62,9 @@ const ViewProfileRequestsScreen = () => {
     setError(null);
 
     try {
-      const res = await Api.getPhotoAccessRequests();
+      const res = await Api.getPhotoAccessRequests('incoming');
       const body = res?.data;
       const items = mapPhotoAccessPayload(body);
-
-      console.log(
-        'ViewProfileRequests backend data:',
-        JSON.stringify(body ?? null, null, 2),
-      );
-      console.log(
-        'ViewProfileRequests mapped:',
-        items.map(item => ({
-          id: item?.id,
-          name: item?.name,
-          status: item?.status,
-        })),
-      );
 
       const hasRequestList =
         Array.isArray(body?.requests) || items.length > 0;

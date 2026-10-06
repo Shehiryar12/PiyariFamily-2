@@ -33,6 +33,8 @@ export type PhotoGalleryResponse = {
     profile_photo_visible?: boolean | number | string | null;
     additional_photos_visible?: boolean | number | string | null;
     access_granted?: boolean | number | string | null;
+    can_view_profile_photo?: boolean | number | string | null;
+    can_view_additional_photos?: boolean | number | string | null;
   } | null;
   photos?: PhotoGalleryPhotoApi[] | null;
   data?: PhotoGalleryResponse | PhotoGalleryPhotoApi[] | null;
@@ -142,40 +144,78 @@ const filterGalleryPhotos = (
   });
 };
 
+const readFlag = (
+  data: PhotoGalleryResponse | null,
+  keys: string[],
+): boolean | undefined => {
+  if (!data) {
+    return undefined;
+  }
+
+  const sources: unknown[] = [
+    data,
+    data.visibility,
+    data.user,
+    (data as { user?: { visibility?: unknown } }).user?.visibility,
+  ];
+
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') {
+      continue;
+    }
+
+    const record = source as Record<string, unknown>;
+    for (const key of keys) {
+      const parsed = parseVisibilityFlag(record[key]);
+      if (parsed !== undefined) {
+        return parsed;
+      }
+    }
+  }
+
+  return undefined;
+};
+
 export const mapPhotoGallery = (
   response?: PhotoGalleryResponse | null,
   fallbackUserId = '',
   fallbackName = '',
 ): PhotoGalleryData => {
   const data = unwrapPayload(response);
-  const pictureVisible =
-    parseVisibilityFlag(data?.visibility?.profile_photo_visible) ??
-    parseVisibilityFlag(data?.visibility?.profile_picture_visible) ??
-    parseVisibilityFlag(
-      (data as { profile_photo_visible?: unknown } | null)?.profile_photo_visible,
-    ) ??
-    parseVisibilityFlag(data?.user?.profile_photo_visible) ??
-    true;
-  const additionalVisible =
-    parseVisibilityFlag(data?.visibility?.additional_photos_visible) ??
-    parseVisibilityFlag(
-      (data as { additional_photos_visible?: unknown } | null)
-        ?.additional_photos_visible,
-    ) ??
-    parseVisibilityFlag(data?.user?.additional_photos_visible) ??
-    true;
-  const grantedFlag =
-    parseVisibilityFlag(data?.access_granted) ??
-    parseVisibilityFlag(data?.visibility?.access_granted) ??
-    parseVisibilityFlag(data?.visibility?.can_view_profile_photo) ??
-    parseVisibilityFlag(
-      (data as { can_view_profile_photo?: unknown } | null)?.can_view_profile_photo,
-    );
-  const showPicture = pictureVisible || grantedFlag === true;
+  const picturePublic =
+    readFlag(data, [
+      'profile_photo_visible',
+      'profilePhotoVisible',
+      'profile_picture_visible',
+      'profilePictureVisible',
+    ]) ?? true;
+  const additionalPublic =
+    readFlag(data, [
+      'additional_photos_visible',
+      'additionalPhotosVisible',
+    ]) ?? true;
+  const generalGrant =
+    readFlag(data, [
+      'access_granted',
+      'photo_access_granted',
+      'has_photo_access',
+      'can_view_photos',
+    ]) === true;
+  const profileGrant =
+    generalGrant || readFlag(data, ['can_view_profile_photo']) === true;
+  const additionalGrant =
+    generalGrant ||
+    readFlag(data, [
+      'can_view_additional_photos',
+      'additional_photo_access_granted',
+      'has_additional_photo_access',
+    ]) === true;
+  const showPicture = picturePublic || profileGrant;
+  const showAdditional = additionalPublic || additionalGrant;
   const rawPhotos = filterGalleryPhotos(
     extractPhotos(response),
     showPicture,
-    additionalVisible,
+    showAdditional,
   ).sort(
     (left, right) =>
       Number(left?.index ?? 0) - Number(right?.index ?? 0),
@@ -195,8 +235,8 @@ export const mapPhotoGallery = (
     )
     .filter(Boolean)
     .map(uri => ({ uri }));
-  const hiddenByOwner = !showPicture || !additionalVisible;
-  const accessGranted = grantedFlag === true || (!hiddenByOwner && photos.length > 0);
+  const hiddenByOwner = !showPicture || !showAdditional;
+  const accessGranted = !hiddenByOwner;
 
   return {
     userId: pickString(
@@ -207,7 +247,7 @@ export const mapPhotoGallery = (
     accessGranted,
     photos,
     profilePictureVisible: showPicture,
-    additionalPhotosVisible: additionalVisible,
+    additionalPhotosVisible: showAdditional,
     hiddenByOwner,
   };
 };

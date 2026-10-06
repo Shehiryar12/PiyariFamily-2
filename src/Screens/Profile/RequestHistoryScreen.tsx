@@ -20,6 +20,7 @@ import {
   getApiErrorMessage,
   isApiSuccess,
   mapPhotoAccessPayload,
+  mergePhotoAccessResponses,
   type ViewProfileRequest,
 } from '../../API';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
@@ -53,17 +54,28 @@ const RequestHistoryScreen = () => {
     setError(null);
 
     try {
-      const res = await Api.getPhotoAccessRequests();
-      const body = res?.data;
+      const [incoming, outgoing] = await Promise.all([
+        Api.getPhotoAccessRequests('incoming'),
+        Api.getPhotoAccessRequests('outgoing'),
+      ]);
+      const body = {
+        requests: mergePhotoAccessResponses([incoming?.data, outgoing?.data]),
+      };
       const items = mapPhotoAccessPayload(body);
       const history = items.filter(isHistoryRequest);
-      const hasRequestList =
-        Array.isArray(body?.requests) || items.length > 0;
+      const hasRequestList = items.length > 0;
+      const success =
+        isApiSuccess(incoming?.status, incoming?.data?.success) ||
+        isApiSuccess(outgoing?.status, outgoing?.data?.success) ||
+        hasRequestList;
 
-      if (isApiSuccess(res?.status, body?.success) || hasRequestList) {
+      if (success) {
         setRequests(history);
       } else {
-        const message = res?.data?.message ?? Strings.requestHistoryError;
+        const message =
+          incoming?.data?.message ??
+          outgoing?.data?.message ??
+          Strings.requestHistoryError;
         setRequests([]);
         setError(message);
         Toast.show(message, Toast.LONG);

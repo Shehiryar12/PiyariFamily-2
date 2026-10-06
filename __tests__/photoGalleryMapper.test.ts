@@ -13,7 +13,14 @@ jest.mock('../src/API/userStorage', () => ({
   },
 }));
 
+jest.mock('../src/Assets', () => ({
+  Images: {
+    hiddenProfile: 7,
+  },
+}));
+
 import { mapPhotoGallery } from '../src/API/mappers/photoGalleryMapper';
+import { applyViewerPhotoPrivacy } from '../src/API/photoPrivacy';
 
 describe('GET /profile/{id}/photo-gallery', () => {
   it('maps Postman access_granted + photo urls', () => {
@@ -69,7 +76,8 @@ describe('GET /profile/{id}/photo-gallery', () => {
       ],
     });
 
-    expect(gallery.accessGranted).toBe(false);
+    expect(gallery.accessGranted).toBe(true);
+    expect(gallery.hiddenByOwner).toBe(false);
     expect(gallery.photos).toHaveLength(2);
     expect(gallery.photos[0]).toEqual({
       uri: 'https://ranglerz.click/piyarifamily/uploads/store/profiles/1056/male-08.png',
@@ -96,7 +104,35 @@ describe('GET /profile/{id}/photo-gallery', () => {
     expect(gallery.userId).toBe('1056');
   });
 
-  it('locks the gallery when the owner hides profile and additional photos', () => {
+  it('locks the gallery when the owner hides photos and this viewer has no access', () => {
+    const gallery = mapPhotoGallery({
+      success: 200,
+      user: { id: 22, name: 'Hina' },
+      visibility: {
+        access_granted: false,
+        additional_photos_visible: false,
+        profile_photo_visible: false,
+      },
+      photos: [
+        {
+          index: 0,
+          url: 'https://example.com/main.png',
+          is_main: true,
+        },
+        {
+          index: 1,
+          url: 'https://example.com/extra.png',
+          is_main: false,
+        },
+      ],
+    });
+
+    expect(gallery.hiddenByOwner).toBe(true);
+    expect(gallery.accessGranted).toBe(false);
+    expect(gallery.photos).toHaveLength(0);
+  });
+
+  it('unlocks hidden photos only for the approved viewer', () => {
     const gallery = mapPhotoGallery({
       success: 200,
       user: { id: 22, name: 'Hina' },
@@ -119,9 +155,12 @@ describe('GET /profile/{id}/photo-gallery', () => {
       ],
     });
 
-    expect(gallery.hiddenByOwner).toBe(true);
-    expect(gallery.accessGranted).toBe(false);
-    expect(gallery.photos).toHaveLength(0);
+    expect(gallery.hiddenByOwner).toBe(false);
+    expect(gallery.accessGranted).toBe(true);
+    expect(gallery.photos).toEqual([
+      { uri: 'https://example.com/main.png' },
+      { uri: 'https://example.com/extra.png' },
+    ]);
   });
 
   it('hides only additional photos when that visibility flag is off', () => {
@@ -147,5 +186,34 @@ describe('GET /profile/{id}/photo-gallery', () => {
     expect(gallery.photos).toEqual([{ uri: 'https://example.com/main.png' }]);
     expect(gallery.additionalPhotosVisible).toBe(false);
     expect(gallery.hiddenByOwner).toBe(true);
+  });
+
+  it('replaces leaked match photos with a dummy when gallery says the picture is hidden', () => {
+    const gallery = mapPhotoGallery({
+      visibility: {
+        access_granted: false,
+        profile_photo_visible: false,
+        additional_photos_visible: false,
+      },
+      photos: [
+        {
+          index: 0,
+          url: 'https://example.com/leaked.png',
+          is_main: true,
+        },
+      ],
+    });
+    const card = applyViewerPhotoPrivacy(
+      {
+        image: { uri: 'https://example.com/leaked.png' },
+        pictureHidden: false,
+      },
+      gallery,
+    );
+
+    expect(gallery.photos).toHaveLength(0);
+    expect(card.pictureHidden).toBe(true);
+    expect(card.image).toBe(7);
+    expect(card.photosNeedAccess).toBe(true);
   });
 });

@@ -23,10 +23,12 @@ import { Images } from '../../Assets';
 import HiddenPhotoOverlay from '../../Components/HiddenPhotoOverlay';
 import {
   Api,
+  applyViewerPhotoPrivacy,
   getApiErrorMessage,
   getImageCacheKey,
   isApiSuccess,
   mapMatchProfileDetail,
+  mapPhotoGallery,
   resolvePhotoAccessRespond,
 } from '../../API';
 import { type ProfileDetail } from '../../Constant/MatchProfiles';
@@ -83,16 +85,42 @@ const ProfileDetailScreen = () => {
     }
 
     try {
-      const res = await Api.getMatchProfile(profileId);
-      if (isApiSuccess(res?.status, res?.data?.success)) {
-        const mapped = mapMatchProfileDetail(res?.data, profileId, preview);
-        setProfile(mapped);
-        setLiked(Boolean(mapped.isLiked));
-      } else {
-        if (!name) {
-          setProfile(null);
+      const [profileRes, galleryRes] = await Promise.allSettled([
+        Api.getMatchProfile(profileId),
+        Api.getProfilePhotoGallery(profileId),
+      ]);
+
+      let mapped =
+        name ? mapMatchProfileDetail(null, profileId, preview) : null;
+
+      if (profileRes.status === 'fulfilled') {
+        const res = profileRes.value;
+        if (isApiSuccess(res?.status, res?.data?.success)) {
+          mapped = mapMatchProfileDetail(res?.data, profileId, preview);
+          setLiked(Boolean(mapped.isLiked));
+        } else if (!name) {
+          mapped = null;
+          Toast.show(res?.data?.message ?? 'Failed to load profile', Toast.LONG);
         }
-        Toast.show(res?.data?.message ?? 'Failed to load profile', Toast.LONG);
+      } else if (!name) {
+        mapped = null;
+        Toast.show(
+          getApiErrorMessage(profileRes.reason, 'Failed to load profile'),
+          Toast.LONG,
+        );
+      }
+
+      if (mapped && galleryRes.status === 'fulfilled') {
+        mapped = applyViewerPhotoPrivacy(
+          mapped,
+          mapPhotoGallery(galleryRes.value?.data, profileId, name),
+        );
+      }
+
+      if (mapped) {
+        setProfile(mapped);
+      } else if (!name) {
+        setProfile(null);
       }
     } catch (error) {
       if (!name) {

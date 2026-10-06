@@ -69,7 +69,7 @@ const NotificationsScreen = () => {
     try {
       const [notificationsRes, photoAccessRes] = await Promise.allSettled([
         Api.getNotifications(),
-        Api.getPhotoAccessRequests(),
+        Api.getPhotoAccessRequests('incoming'),
       ]);
 
       if (notificationsRes.status === 'fulfilled') {
