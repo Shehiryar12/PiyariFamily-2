@@ -70,6 +70,21 @@ const SettingItem = ({
   </TouchableOpacity>
 );
 
+type ProfileBadgeItem = {
+  id: string;
+  icon: string;
+  label: string;
+};
+
+const ProfileBadge = ({ icon, label }: Omit<ProfileBadgeItem, 'id'>) => (
+  <View style={styles.profileBadge}>
+    <Icon name={icon} size={fs(12)} color={Colors.gold} />
+    <Text style={styles.profileBadgeText} numberOfLines={1}>
+      {label}
+    </Text>
+  </View>
+);
+
 const VISIBILITY_SAVE_DELAY_MS = 700;
 
 const SettingsScreen = () => {
@@ -80,7 +95,8 @@ const SettingsScreen = () => {
   const [profileName, setProfileName] = useState(user?.name ?? '');
   const [profileMeta, setProfileMeta] = useState('');
   // const [isVerified, setIsVerified] = useState(false);
-  const [isProfileComplete, setIsProfileComplete] = useState(false);
+  const [isSeriousMember, setIsSeriousMember] = useState(false);
+  const [showVerifiedBadge, setShowVerifiedBadge] = useState(false);
   const [profilePictureVisible, setProfilePictureVisible] = useState(true);
   const [additionalPhotosVisible, setAdditionalPhotosVisible] = useState(true);
   const [savingVisibility, setSavingVisibility] = useState(false);
@@ -104,8 +120,14 @@ const SettingsScreen = () => {
     const profile = mapProfileToSettings(rawProfile);
     setProfileName(profile.name);
     setProfileMeta(profile.meta);
-    // setIsVerified(profile.isVerified);
-    setIsProfileComplete(profile.isProfileComplete);
+    setIsSeriousMember(profile.isSeriousMember);
+    setShowVerifiedBadge(
+      profile.showVerifiedBadge ||
+        parseVisibilityFlag(
+          (rawProfile as { show_verified_badge?: unknown })
+            ?.show_verified_badge,
+        ) === true,
+    );
     if (!pendingVisibilityRef.current && !visibilityInFlightRef.current) {
       setProfilePictureVisible(profile.profilePictureVisible);
       setAdditionalPhotosVisible(profile.additionalPhotosVisible);
@@ -297,6 +319,27 @@ const SettingsScreen = () => {
     }
   };
 
+  const profileBadges: ProfileBadgeItem[] = [
+    ...(showVerifiedBadge
+      ? [
+          {
+            id: 'verified',
+            icon: 'shield-check',
+            label: Strings.verifiedLabel,
+          },
+        ]
+      : []),
+    ...(isSeriousMember
+      ? [
+          {
+            id: 'serious',
+            icon: 'check-decagram',
+            label: Strings.profileCompleteLabel,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <ScreenHeader
@@ -323,28 +366,22 @@ const SettingsScreen = () => {
             <Text style={styles.profileMeta} numberOfLines={1}>
               {profileMeta || '-'}
             </Text>
-            {isProfileComplete ? (
-              <View style={styles.readyBadge}>
-                <Icon
-                  name="check-decagram"
-                  size={fs(13)}
-                  color={Colors.gold}
-                />
-                <Text style={styles.readyBadgeText}>
-                  {Strings.profileCompleteLabel}
-                </Text>
+            {profileBadges.length ? (
+              <View style={styles.badgeRow}>
+                {profileBadges.map(badge => (
+                  <ProfileBadge
+                    key={badge.id}
+                    icon={badge.icon}
+                    label={badge.label}
+                  />
+                ))}
               </View>
             ) : null}
-            {/* {isVerified ? (
-              <View style={styles.verifiedBadge}>
-                <Icon name="shield-check" size={fs(11)} color={Colors.gold} />
-                <Text style={styles.verifiedText}>{Strings.verifiedLabel}</Text>
-              </View>
-            ) : null} */}
           </View>
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => navigation.navigate('EditProfile')}
+            style={styles.editProfileBtn}
           >
             <Text style={styles.editProfileLink}>
               {Strings.editProfile} →
@@ -573,7 +610,7 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: Colors.tabActiveBg,
     borderRadius: wp('4.5%'),
     padding: wp('4%'),
@@ -587,6 +624,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.primary,
     marginRight: wp('3.5%'),
+    flexShrink: 0,
   },
   profileInfo: {
     flex: 1,
@@ -605,33 +643,36 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     marginBottom: hp('0.5%'),
   },
-  verifiedBadge: {
+  badgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: wp('1%'),
-    backgroundColor: '#FFF8E7',
-    paddingHorizontal: wp('2%'),
-    paddingVertical: hp('0.25%'),
-    borderRadius: wp('2.5%'),
+    gap: wp('1.5%'),
+    rowGap: hp('0.6%'),
   },
-  readyBadge: {
+  profileBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: wp('1.2%'),
+    flexGrow: 0,
+    flexShrink: 0,
+    gap: wp('1%'),
     backgroundColor: '#FFF8E7',
     borderWidth: 1,
     borderColor: Colors.goldLight,
-    paddingHorizontal: wp('2.4%'),
-    paddingVertical: hp('0.32%'),
+    paddingHorizontal: wp('2.2%'),
+    paddingVertical: hp('0.3%'),
     borderRadius: wp('5%'),
   },
-  readyBadgeText: {
+  profileBadgeText: {
     fontSize: fs(10),
     fontFamily: Fonts.semiBold,
     color: Colors.gold,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    flexShrink: 1,
+  },
+  editProfileBtn: {
+    paddingTop: hp('0.2%'),
+    flexShrink: 0,
   },
   editProfileLink: {
     fontSize: fs(11),

@@ -70,6 +70,7 @@ export {
 export type { ReferralState } from './slices/referralSlice';
 export {
   setFilterForm,
+  setQuickFilterCatalog,
   setFilterResults,
   setFilterMatchLiked,
   clearFilterResults,
@@ -80,5 +81,6 @@ export {
   selectFilterApplied,
   selectFilterHasExactMatches,
   selectFilterFallbackUsed,
+  selectQuickFilterCatalog,
 } from './slices/filterSlice';
 export type { FilterFormState, FilterState } from './slices/filterSlice';

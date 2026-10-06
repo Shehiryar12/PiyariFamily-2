@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import AuthBackground from '../../Components/AuthBackground';
 import AuthFooterHint from '../../Components/AuthFooterHint';
@@ -12,7 +13,9 @@ import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
+import { Api, isApiSuccess, isPhoneVerifiedPayload, saveProfileCache } from '../../API';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { fs, hp, wp } from '../../Functions/responsive';
 
 type NavigationProp = NativeStackNavigationProp<
@@ -29,6 +32,41 @@ const SPARKLE_POSITIONS = [
 
 const ProfileVerifiedScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      const syncVerifiedStatus = async () => {
+        try {
+          const statusRes = await Api.getVerifyPhoneStatus();
+          if (
+            !cancelled &&
+            isApiSuccess(statusRes?.status, statusRes?.data?.success) &&
+            isPhoneVerifiedPayload(statusRes?.data)
+          ) {
+            saveProfileCache(statusRes.data);
+          }
+        } catch {
+        }
+
+        try {
+          const profileRes = await Api.getProfile();
+          if (!cancelled && profileRes?.status == 200) {
+            saveProfileCache(profileRes.data);
+          }
+        } catch {
+        }
+      };
+
+      syncVerifiedStatus();
+
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   const handleReturn = () => {
     navigation.popToTop();
@@ -79,7 +117,12 @@ const ProfileVerifiedScreen = () => {
           <Text style={styles.subtitle}>{Strings.numberVerifiedSubtitle}</Text>
         </View>
 
-        <View style={styles.bottomSection}>
+        <View
+          style={[
+            styles.bottomSection,
+            { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          ]}
+        >
           <PrimaryButton
             title={Strings.returnToSettings}
             onPress={handleReturn}
@@ -104,30 +147,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: hp('2%'),
+    paddingBottom: hp('1%'),
   },
   illustrationWrap: {
-    width: wp('52%'),
-    height: wp('52%'),
+    width: wp('44%'),
+    height: wp('44%'),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: hp('2.5%'),
+    marginBottom: hp('1.6%'),
     position: 'relative',
   },
   glowRing: {
     position: 'absolute',
-    width: wp('48%'),
-    height: wp('48%'),
-    borderRadius: wp('24%'),
+    width: wp('40%'),
+    height: wp('40%'),
+    borderRadius: wp('20%'),
   },
   sparkle: {
     position: 'absolute',
     opacity: 0.9,
   },
   successCore: {
-    width: wp('30%'),
-    height: wp('30%'),
-    borderRadius: wp('15%'),
+    width: wp('26%'),
+    height: wp('26%'),
+    borderRadius: wp('13%'),
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -138,9 +181,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   checkRing: {
-    width: wp('18%'),
-    height: wp('18%'),
-    borderRadius: wp('9%'),
+    width: wp('16%'),
+    height: wp('16%'),
+    borderRadius: wp('8%'),
     borderWidth: 2.5,
     borderColor: Colors.white,
     alignItems: 'center',
@@ -182,12 +225,13 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.regular,
     lineHeight: hp('2.6%'),
     textAlign: 'center',
-    paddingHorizontal: wp('4%'),
+    paddingHorizontal: wp('2%'),
     maxWidth: AuthStyles.maxContentWidth,
   },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingTop: hp('1.5%'),
+    flexShrink: 0,
   },
   button: {
     shadowColor: Colors.primary,
@@ -197,7 +241,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   footerHint: {
-    marginTop: AuthStyles.footerHintTop,
+    marginTop: hp('1.6%'),
   },
 });
 

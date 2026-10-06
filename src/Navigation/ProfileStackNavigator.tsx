@@ -35,8 +35,8 @@ export type ProfileStackParamList = {
   Settings: undefined;
   EditProfile: undefined;
   VerifyProfile: undefined;
-  VerifyProfileCode: { phone: string };
-  ProfileVerified: { phone: string };
+  VerifyProfileCode: { phone: string; otp?: string };
+  ProfileVerified: { phone?: string };
   Notifications: undefined;
   ViewProfileRequests: undefined;
   RequestHistory: undefined;

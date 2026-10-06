@@ -14,6 +14,8 @@ export {
   isOtpCooldownError,
   pickOtpCooldownSeconds,
   resolveOtpResendResult,
+  pickOtpCode,
+  isPhoneVerifiedPayload,
 } from './otpCooldown';
 export { findCountryMatch, mapCountries, toFlagCountryCode } from './mappers/countryMapper';
 export type {

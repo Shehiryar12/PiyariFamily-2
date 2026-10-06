@@ -216,3 +216,81 @@ export const resolveOtpResendResult = (source: unknown): OtpResendResult => {
     message: data?.message || 'Failed to send code. Please try again.',
   };
 };
+
+const OTP_VALUE_KEYS = [
+  'otp',
+  'code',
+  'otp_code',
+  'verification_code',
+  'verify_code',
+  'phone_otp',
+];
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
+const readOtpDigits = (value: unknown) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.length === 6) {
+    return digits;
+  }
+  if (digits.length > 6) {
+    return digits.slice(-6);
+  }
+  return '';
+};
+
+export const pickOtpCode = (source: unknown): string => {
+  const payload = asRecord(getOtpPayload(source));
+  if (!payload) {
+    return '';
+  }
+
+  const nested = asRecord(payload.data);
+  const bags = [payload, nested, asRecord(nested?.data)];
+
+  for (const bag of bags) {
+    if (!bag) {
+      continue;
+    }
+
+    for (const key of OTP_VALUE_KEYS) {
+      const otp = readOtpDigits(bag[key]);
+      if (otp) {
+        return otp;
+      }
+    }
+  }
+
+  const message = String(payload.message ?? nested?.message ?? '');
+  return message.match(/\b(\d{6})\b/)?.[1] ?? '';
+};
+
+const truthyFlag = (value: unknown) => {
+  if (value === true || value === 1 || value === '1') {
+    return true;
+  }
+  if (typeof value === 'string' && value.trim().toLowerCase() === 'true') {
+    return true;
+  }
+  return false;
+};
+
+export const isPhoneVerifiedPayload = (source: unknown): boolean => {
+  const payload = asRecord(getOtpPayload(source));
+  if (!payload) {
+    return false;
+  }
+
+  const nested = asRecord(payload.data);
+
+  return [
+    payload.phone_verified,
+    payload.is_phone_verified,
+    nested?.phone_verified,
+    nested?.is_phone_verified,
+    nested?.verified,
+  ].some(truthyFlag);
+};

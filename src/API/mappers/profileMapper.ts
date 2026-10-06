@@ -35,6 +35,8 @@ export type ProfileApiData = {
   age?: number | null;
   is_verified?: boolean;
   phone_verified?: boolean;
+  is_serious_member?: boolean;
+  show_verified_badge?: boolean;
   location?: string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
@@ -96,6 +98,8 @@ export type SettingsProfileData = {
   meta: string;
   isVerified: boolean;
   isProfileComplete: boolean;
+  isSeriousMember: boolean;
+  showVerifiedBadge: boolean;
   profilePhoto: string | null;
   profilePictureVisible: boolean;
   additionalPhotosVisible: boolean;
@@ -256,7 +260,10 @@ export const normalizeProfileData = (source: unknown): ProfileApiData => {
   const obj = source as Record<string, unknown>;
 
   if (obj.user && typeof obj.user === 'object') {
-    const fromUser = mapGetProfileFields(obj.user as Record<string, unknown>);
+    const fromUser = overlayProfileFlags(
+      mapGetProfileFields(obj.user as Record<string, unknown>),
+      obj,
+    );
     const overlayMarital = [
       obj.marital_status,
       obj.maritalStatus,
@@ -272,7 +279,11 @@ export const normalizeProfileData = (source: unknown): ProfileApiData => {
     const data = obj.data as Record<string, unknown>;
 
     if (data.user && typeof data.user === 'object') {
-      const fromUser = mapGetProfileFields(data.user as Record<string, unknown>);
+      const fromUser = overlayProfileFlags(
+        mapGetProfileFields(data.user as Record<string, unknown>),
+        data,
+        obj,
+      );
       const overlayMarital = [
         obj.marital_status,
         data.marital_status,
@@ -287,7 +298,10 @@ export const normalizeProfileData = (source: unknown): ProfileApiData => {
       return withNormalizedPhotos(fromUser, data, obj);
     }
 
-    return withNormalizedPhotos(mapGetProfileFields(data), obj);
+    return withNormalizedPhotos(
+      overlayProfileFlags(mapGetProfileFields(data), obj),
+      obj,
+    );
   }
 
   return withNormalizedPhotos(mapGetProfileFields(obj));
@@ -399,6 +413,36 @@ const withNormalizedPhotos = (
     profile as Record<string, unknown>,
     ...sources,
   );
+};
+
+const overlayProfileFlags = (
+  profile: ProfileApiData,
+  ...sources: Array<Record<string, unknown> | null | undefined>
+): ProfileApiData => {
+  sources.forEach(source => {
+    if (!source || typeof source !== 'object' || Array.isArray(source)) {
+      return;
+    }
+
+    const extra = mapGetProfileFields(source);
+    if (extra.is_serious_member !== undefined) {
+      profile.is_serious_member = extra.is_serious_member;
+    }
+    if (extra.show_verified_badge !== undefined) {
+      profile.show_verified_badge = extra.show_verified_badge;
+    }
+    if (extra.phone_verified !== undefined) {
+      profile.phone_verified = extra.phone_verified;
+    }
+    if (extra.is_verified !== undefined) {
+      profile.is_verified = extra.is_verified;
+    }
+    if (extra.profile_completed !== undefined) {
+      profile.profile_completed = extra.profile_completed;
+    }
+  });
+
+  return profile;
 };
 
 const mapGetProfileFields = (
@@ -553,6 +597,26 @@ const mapGetProfileFields = (
     profile.phone_verified = phoneVerified;
   }
 
+  const seriousMember = parseVisibilityFlag(
+    pick('is_serious_member', 'serious_member', 'isSeriousMember'),
+  );
+  if (seriousMember !== undefined) {
+    profile.is_serious_member = seriousMember;
+  }
+
+  const showVerifiedBadge = parseVisibilityFlag(
+    pick(
+      'show_verified_badge',
+      'showVerifiedBadge',
+      'verified_badge',
+      'has_verified_badge',
+      'display_verified_badge',
+    ),
+  );
+  if (showVerifiedBadge !== undefined) {
+    profile.show_verified_badge = showVerifiedBadge;
+  }
+
   const profession = pick('profession', 'job_title');
   if (typeof profession === 'string') {
     profile.profession = profession;
@@ -676,6 +740,14 @@ export const resolveProfileData = (source: unknown): ProfileApiData => {
     phone_verified: pickProfileField(
       fromApi.phone_verified,
       cached?.phone_verified,
+    ),
+    is_serious_member: pickProfileField(
+      fromApi.is_serious_member,
+      cached?.is_serious_member,
+    ),
+    show_verified_badge: pickProfileField(
+      fromApi.show_verified_badge,
+      cached?.show_verified_badge,
     ),
     profile_completed: pickProfileField(
       fromApi.profile_completed,
@@ -1285,6 +1357,13 @@ export const mapProfileToSettings = (
     meta,
     isVerified: Boolean(profile?.is_verified),
     isProfileComplete: parseVisibilityFlag(profile?.profile_completed) === true,
+    isSeriousMember: parseVisibilityFlag(profile?.is_serious_member) === true,
+    showVerifiedBadge:
+      parseVisibilityFlag(profile?.show_verified_badge) === true ||
+      parseVisibilityFlag(
+        (profile as Record<string, unknown> | null | undefined)
+          ?.showVerifiedBadge,
+      ) === true,
     profilePhoto: form.profilePhoto,
     profilePictureVisible:
       parseVisibilityFlag(profile?.profile_photo_visible) ?? true,

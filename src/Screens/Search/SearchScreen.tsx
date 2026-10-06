@@ -14,6 +14,8 @@ import {
   Api,
   getApiErrorMessage,
   hydrateMatchImages,
+  isApiSuccess,
+  mapFilterSetup,
   saveProfileCache,
   type FilterQuickOption,
   type FilterSetupData,
@@ -42,8 +44,10 @@ import {
   selectFilterHasExactMatches,
   selectFilterResults,
   selectProfile,
+  selectQuickFilterCatalog,
   setFilterMatchLiked,
   setHomeMatchLiked,
+  setQuickFilterCatalog,
   useAppDispatch,
   useAppSelector,
 } from '../../Redux';
@@ -74,6 +78,7 @@ const SearchScreen = () => {
   const filterApplied = useAppSelector(selectFilterApplied);
   const filterForm = useAppSelector(selectFilterForm);
   const filterHasExactMatches = useAppSelector(selectFilterHasExactMatches);
+  const storedQuickFilters = useAppSelector(selectQuickFilterCatalog);
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
@@ -98,47 +103,59 @@ const SearchScreen = () => {
   const quickFiltersRef = useRef(quickFilters);
   const matchesRef = useRef(suggestedMatches);
 
-  catalogsRef.current = searchCatalogs;
-  quickFiltersRef.current = quickFilters;
-  matchesRef.current = suggestedMatches;
-
-  const comingFromFilter = Boolean(route.params?.fromFilter);
   const appliedQuickFilterIds = Object.entries(
     filterForm?.activeQuickFilters ?? {},
   )
     .filter(([, enabled]) => Boolean(enabled))
     .map(([id]) => id);
-  const appliedQuickFilterKey = appliedQuickFilterIds.join('|');
-  const showingFilterResults =
-    filterApplied &&
-    !submittedQuery.trim() &&
-    (comingFromFilter || !activeQuickFilter);
+  const visibleQuickFilters = quickFilters.length
+    ? quickFilters
+    : storedQuickFilters;
+  const resultQuickFilterIds = [
+    ...appliedQuickFilterIds,
+    ...(activeQuickFilter && !appliedQuickFilterIds.includes(activeQuickFilter)
+      ? [activeQuickFilter]
+      : []),
+  ];
+  const appliedQuickFilterKey = resultQuickFilterIds.join('|');
+  const showingFilterResults = filterApplied && !submittedQuery.trim();
 
-  const applySearchMeta = useCallback((setup: FilterSetupData) => {
-    setQuickFilters(current => {
-      const next = setup.quickFilters;
-      const unchanged =
-        current.length === next.length &&
-        current.every(
-          (item, index) =>
-            item.id === next[index]?.id && item.label === next[index]?.label,
-        );
-      return unchanged ? current : next;
-    });
+  catalogsRef.current = searchCatalogs;
+  quickFiltersRef.current = visibleQuickFilters;
+  matchesRef.current = suggestedMatches;
 
-    if (setup.options.cities.length || setup.options.professions.length) {
-      setSearchCatalogs(current => {
-        const next = {
-          cities: setup.options.cities,
-          professions: setup.options.professions,
-        };
-        const unchanged =
-          current.cities.join('|') === next.cities.join('|') &&
-          current.professions.join('|') === next.professions.join('|');
-        return unchanged ? current : next;
-      });
-    }
-  }, []);
+  const applySearchMeta = useCallback(
+    (setup: FilterSetupData) => {
+      const nextFilters = setup.quickFilters;
+      if (nextFilters.length) {
+        dispatch(setQuickFilterCatalog(nextFilters));
+        setQuickFilters(current => {
+          const unchanged =
+            current.length === nextFilters.length &&
+            current.every(
+              (item, index) =>
+                item.id === nextFilters[index]?.id &&
+                item.label === nextFilters[index]?.label,
+            );
+          return unchanged ? current : nextFilters;
+        });
+      }
+
+      if (setup.options.cities.length || setup.options.professions.length) {
+        setSearchCatalogs(current => {
+          const next = {
+            cities: setup.options.cities,
+            professions: setup.options.professions,
+          };
+          const unchanged =
+            current.cities.join('|') === next.cities.join('|') &&
+            current.professions.join('|') === next.professions.join('|');
+          return unchanged ? current : next;
+        });
+      }
+    },
+    [dispatch],
+  );
 
   const fetchMatchSearch = useCallback(
     async (query: string, quickFilter: string | null) => {
@@ -196,7 +213,7 @@ const SearchScreen = () => {
         );
         setLoading(false);
 
-        if (trimmedQuery.length >= MIN_SEARCH_LENGTH || quickFilter) {
+        if (trimmedQuery.length >= MIN_SEARCH_LENGTH) {
           dispatch(clearFilterResults());
         }
 
@@ -292,6 +309,7 @@ const SearchScreen = () => {
       setSearchQuery('');
       setSubmittedQuery('');
       setActiveQuickFilter(null);
+      searchGenerationRef.current += 1;
       lastSearchKeyRef.current = '';
       inFlightKeyRef.current = '';
       navigation.setParams({
@@ -313,7 +331,7 @@ const SearchScreen = () => {
           filterResults,
           appliedQuickFilterKey
             ? appliedQuickFilterKey.split('|').map(id => {
-                const meta = quickFilters.find(item => item.id === id);
+                const meta = visibleQuickFilters.find(item => item.id === id);
                 return { id, label: meta?.label ?? id };
               })
             : [],
@@ -327,12 +345,27 @@ const SearchScreen = () => {
     filterResults,
     profile?.city,
     profile?.location,
-    quickFilters,
+    visibleQuickFilters,
     showingFilterResults,
   ]);
 
+  const loadSearchCatalog = useCallback(async () => {
+    if (quickFiltersRef.current.length || storedQuickFilters.length) {
+      return;
+    }
+
+    try {
+      const res = await Api.getMatchSearch();
+      if (isApiSuccess(res?.status, res?.data?.success)) {
+        applySearchMeta(mapFilterSetup(res?.data));
+      }
+    } catch {
+    }
+  }, [applySearchMeta, storedQuickFilters.length]);
+
   useEffect(() => {
     if (showingFilterResults) {
+      loadSearchCatalog();
       return;
     }
 
@@ -340,12 +373,13 @@ const SearchScreen = () => {
   }, [
     activeQuickFilter,
     fetchMatchSearch,
+    loadSearchCatalog,
     showingFilterResults,
     submittedQuery,
   ]);
 
   const selectedFilterIds = showingFilterResults
-    ? appliedQuickFilterIds
+    ? resultQuickFilterIds
     : activeQuickFilter
       ? [activeQuickFilter]
       : [];
@@ -423,13 +457,9 @@ const SearchScreen = () => {
           onSubmit={() => submitSearch(searchQuery)}
         />
         <SearchFilters
-          filters={quickFilters}
+          filters={visibleQuickFilters}
           selectedIds={selectedFilterIds}
           onToggle={id => {
-            if (showingFilterResults && appliedQuickFilterIds.includes(id)) {
-              return;
-            }
-
             lastSearchKeyRef.current = '';
             setActiveQuickFilter(prev => (prev === id ? null : id));
           }}

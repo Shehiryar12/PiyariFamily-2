@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { FilterQuickOption } from '../../API/mappers/filterMapper';
 import type { SuggestedMatch } from '../../API/mappers/matchMapper';
 
 export type FilterFormState = {
@@ -24,6 +25,7 @@ export type FilterState = {
   applied: boolean;
   fallbackUsed: boolean;
   hasExactMatches: boolean;
+  quickFilterCatalog: FilterQuickOption[];
 };
 
 export const EMPTY_FILTER_FORM: FilterFormState = {
@@ -49,6 +51,7 @@ const initialState: FilterState = {
   applied: false,
   fallbackUsed: false,
   hasExactMatches: false,
+  quickFilterCatalog: [],
 };
 
 const filterSlice = createSlice({
@@ -57,6 +60,14 @@ const filterSlice = createSlice({
   reducers: {
     setFilterForm: (state, action: PayloadAction<FilterFormState>) => {
       state.form = action.payload;
+    },
+    setQuickFilterCatalog: (
+      state,
+      action: PayloadAction<FilterQuickOption[]>,
+    ) => {
+      if (action.payload.length) {
+        state.quickFilterCatalog = action.payload;
+      }
     },
     setFilterResults: (
       state,
@@ -95,6 +106,7 @@ const filterSlice = createSlice({
 
 export const {
   setFilterForm,
+  setQuickFilterCatalog,
   setFilterResults,
   setFilterMatchLiked,
   clearFilterResults,
@@ -113,5 +125,7 @@ export const selectFilterHasExactMatches = (state: { filter: FilterState }) =>
   state.filter.hasExactMatches;
 export const selectFilterFallbackUsed = (state: { filter: FilterState }) =>
   state.filter.fallbackUsed;
+export const selectQuickFilterCatalog = (state: { filter: FilterState }) =>
+  state.filter.quickFilterCatalog;
 
 export default filterSlice.reducer;

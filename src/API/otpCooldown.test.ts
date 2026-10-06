@@ -1,5 +1,7 @@
 import {
   pickOtpCooldownSeconds,
+  pickOtpCode,
+  isPhoneVerifiedPayload,
   resolveOtpResendResult,
 } from './otpCooldown';
 
@@ -125,5 +127,40 @@ describe('OTP resend handling', () => {
         resend_after_seconds: 298.318188,
       }),
     ).toBe(120);
+  });
+});
+
+describe('phone OTP response helpers', () => {
+  it('reads a 6-digit otp from send/resend payloads', () => {
+    expect(pickOtpCode({ success: 200, otp: 482913 })).toBe('482913');
+    expect(
+      pickOtpCode({
+        success: true,
+        data: { otp_code: '104455' },
+      }),
+    ).toBe('104455');
+    expect(
+      pickOtpCode({
+        message: 'Your verification code is 778899',
+      }),
+    ).toBe('778899');
+  });
+
+  it('detects verify-phone/status as verified', () => {
+    expect(
+      isPhoneVerifiedPayload({
+        success: true,
+        phone_verified: true,
+      }),
+    ).toBe(true);
+    expect(
+      isPhoneVerifiedPayload({
+        success: 200,
+        data: { phone_verified: 1 },
+      }),
+    ).toBe(true);
+    expect(isPhoneVerifiedPayload({ success: true, is_verified: true })).toBe(
+      false,
+    );
   });
 });

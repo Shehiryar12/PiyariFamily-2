@@ -89,4 +89,23 @@ describe('edit profile marital status and community', () => {
     expect(profile.community).toBe('Shia');
     expect(profile.religion).toBe('Islam');
   });
+
+  it('reads show_verified_badge from wrapper when nested user omits it', () => {
+    const profile = normalizeProfileData({
+      success: 200,
+      show_verified_badge: true,
+      data: {
+        show_verified_badge: true,
+        is_serious_member: true,
+        user: {
+          name: 'Hania',
+          is_serious_member: true,
+        },
+      },
+    });
+
+    expect(profile.show_verified_badge).toBe(true);
+    expect(profile.is_serious_member).toBe(true);
+    expect(profile.name).toBe('Hania');
+  });
 });

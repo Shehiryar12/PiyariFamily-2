@@ -136,6 +136,23 @@ const isAccountUpdateSuccess = (
 
 type VerifyPhoneResponse = MessageResponse & {
   user?: ProfileApiData;
+  phone?: string;
+  otp?: string | number;
+  code?: string | number;
+  otp_code?: string | number;
+  verification_code?: string | number;
+  verified?: boolean | number | string;
+  phone_verified?: boolean | number | string;
+  is_phone_verified?: boolean | number | string;
+  data?: ProfileApiData & {
+    otp?: string | number;
+    code?: string | number;
+    otp_code?: string | number;
+    verification_code?: string | number;
+    verified?: boolean | number | string;
+    phone_verified?: boolean | number | string;
+    phone?: string;
+  };
 };
 
 export type ProfileFaithPayload = {
@@ -330,6 +347,15 @@ export const Api = {
     return { status, ...data };
   },
 
+  resendVerifyPhone: async (payload: Record<string, FormValue>) => {
+    const { status, data } = await apiClient.postForm<VerifyPhoneResponse>(
+      ENDPOINTS.VERIFY_PHONE_RESEND,
+      payload,
+    );
+
+    return { status, ...data };
+  },
+
   verifyPhone: async (payload: Record<string, FormValue>) => {
     const { status, data } = await apiClient.postForm<VerifyPhoneResponse>(
       ENDPOINTS.VERIFY_PHONE_VERIFY,
@@ -338,6 +364,9 @@ export const Api = {
 
     return { status, ...data };
   },
+
+  getVerifyPhoneStatus: () =>
+    apiClient.get<VerifyPhoneResponse>(ENDPOINTS.VERIFY_PHONE_STATUS),
 
   updateProfile: async (
     payload: Record<string, FormValue>,

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import KeyboardScrollView from '../../Components/KeyboardScrollView';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
@@ -20,8 +21,10 @@ import BackButton from '../../Components/BackButton';
 import PrimaryButton from '../../Components/PrimaryButton';
 import {
   Api,
-  ENDPOINTS,
   getApiErrorMessage,
+  isApiSuccess,
+  isOtpCooldownError,
+  pickOtpCode,
   resolveProfileData,
   type ApiErrorResponse,
 } from '../../API';
@@ -30,6 +33,7 @@ import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { hp, wp, fs } from '../../Functions/responsive';
 import { useAppSelector, selectProfile, selectUser } from '../../Redux';
 
@@ -40,6 +44,7 @@ type NavigationProp = NativeStackNavigationProp<
 
 const VerifyProfileScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
   const cachedProfile = useAppSelector(selectProfile);
   const user = useAppSelector(selectUser);
   const [phone, setPhone] = useState('');
@@ -50,31 +55,27 @@ const VerifyProfileScreen = () => {
     setPrefilling(true);
 
     try {
+      const savedPhone = cachedProfile?.phone ?? user?.phone ?? '';
+      if (savedPhone) {
+        setPhone(savedPhone);
+      }
+
       const res = await Api.getProfile();
 
       if (res?.status == 200) {
         const profile = resolveProfileData(res?.data);
-        const savedPhone =
-          profile.phone ??
-          cachedProfile?.phone ??
-          user?.phone ??
-          '';
+        const profilePhone =
+          profile.phone ?? cachedProfile?.phone ?? user?.phone ?? '';
 
-        if (savedPhone) {
-          setPhone(savedPhone);
+        if (profilePhone) {
+          setPhone(profilePhone);
         }
-
-        if (profile.phone_verified) {
-          navigation.replace('ProfileVerified', { phone: savedPhone });
-        }
-      } else {
       }
-    } catch (error) {
-      const axiosError = error as AxiosError<ApiErrorResponse>;
+    } catch {
     } finally {
       setPrefilling(false);
     }
-  }, [cachedProfile?.phone, navigation, user?.phone]);
+  }, [cachedProfile?.phone, user?.phone]);
 
   useFocusEffect(
     useCallback(() => {
@@ -97,14 +98,25 @@ const VerifyProfileScreen = () => {
     try {
       const res = await Api.sendVerifyPhone({ phone: trimmed });
 
-      if (res?.status == 200) {
+      if (isApiSuccess(res?.status, res?.success) || isOtpCooldownError(res)) {
         Toast.show(res?.message ?? 'Verification code sent', Toast.LONG);
-        navigation.navigate('VerifyProfileCode', { phone: trimmed });
+        navigation.navigate('VerifyProfileCode', {
+          phone: trimmed,
+          otp: pickOtpCode(res),
+        });
       } else {
         Toast.show(res?.message ?? 'Failed to send verification code', Toast.LONG);
       }
     } catch (error) {
       const axiosError = error as AxiosError<ApiErrorResponse>;
+      if (isOtpCooldownError(axiosError)) {
+        Toast.show(getApiErrorMessage(axiosError), Toast.LONG);
+        navigation.navigate('VerifyProfileCode', {
+          phone: trimmed,
+          otp: pickOtpCode(axiosError),
+        });
+        return;
+      }
       Toast.show(getApiErrorMessage(axiosError), Toast.LONG);
     } finally {
       setLoading(false);
@@ -159,22 +171,25 @@ const VerifyProfileScreen = () => {
               />
               <Text style={styles.hintText}>{Strings.securePhoneOtpHint}</Text>
             </View>
-
-            <View style={styles.flexSpacer} />
-
-            <View style={styles.bottomSection}>
-              <PrimaryButton
-                title={Strings.sendVerificationCode}
-                onPress={handleSendCode}
-                loading={loading || prefilling}
-                showArrow
-              />
-              <AuthFooterHint
-                text={Strings.verificationTrustHint}
-                style={styles.footerHint}
-              />
-            </View>
           </KeyboardScrollView>
+
+          <View
+            style={[
+              styles.bottomSection,
+              { paddingBottom: getFooterBottomPadding(insets.bottom) },
+            ]}
+          >
+            <PrimaryButton
+              title={Strings.sendVerificationCode}
+              onPress={handleSendCode}
+              loading={loading || prefilling}
+              showArrow
+            />
+            <AuthFooterHint
+              text={Strings.verificationTrustHint}
+              style={styles.footerHint}
+            />
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </AuthBackground>
@@ -250,16 +265,14 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: hp('2%'),
   },
-  flexSpacer: {
-    flex: 1,
-    minHeight: hp('2%'),
-  },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.5%'),
+    flexShrink: 0,
   },
   footerHint: {
-    marginTop: AuthStyles.footerHintTop,
+    marginTop: hp('1.6%'),
   },
 });
 

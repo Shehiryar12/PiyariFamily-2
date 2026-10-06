@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import KeyboardScrollView from '../../Components/KeyboardScrollView';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
@@ -24,7 +25,12 @@ import ResendCodeSection, {
 import {
   Api,
   getApiErrorMessage,
+  isApiSuccess,
   isOtpCooldownError,
+  pickOtpCode,
+  pickOtpCooldownSeconds,
+  resolveOtpResendResult,
+  saveProfileCache,
   type ApiErrorResponse,
 } from '../../API';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
@@ -32,6 +38,7 @@ import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { hp, wp, fs } from '../../Functions/responsive';
 
 type RouteProps = RouteProp<ProfileStackParamList, 'VerifyProfileCode'>;
@@ -43,11 +50,19 @@ type NavigationProp = NativeStackNavigationProp<
 const VerifyProfileCodeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
-  const [code, setCode] = useState('');
+  const insets = useSafeAreaInsets();
+  const [code, setCode] = useState(route.params.otp ?? '');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCycle, setResendCycle] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+
+  const applyOtpFromResponse = (source: unknown) => {
+    const otp = pickOtpCode(source);
+    if (otp) {
+      setCode(otp);
+    }
+  };
 
   const handleVerify = async () => {
     if (code.length !== 6) {
@@ -66,9 +81,10 @@ const VerifyProfileCodeScreen = () => {
         otp: code,
       });
 
-      if (res?.status == 200) {
+      if (isApiSuccess(res?.status, res?.success)) {
         Toast.show(res?.message ?? 'Phone verified successfully', Toast.LONG);
-        navigation.navigate('ProfileVerified', { phone: route.params.phone });
+        saveProfileCache(res);
+        navigation.replace('ProfileVerified', { phone: route.params.phone });
       } else {
         Toast.show(res?.message ?? 'Invalid verification code', Toast.LONG);
       }
@@ -88,21 +104,32 @@ const VerifyProfileCodeScreen = () => {
     setResending(true);
 
     try {
-      const res = await Api.sendVerifyPhone({ phone: route.params.phone });
+      const res = await Api.resendVerifyPhone({ phone: route.params.phone });
+      const result = resolveOtpResendResult(res);
 
-      if (res?.status == 200) {
-        Toast.show(res?.message ?? 'Verification code resent');
-        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      if (result.sent || isApiSuccess(res?.status, res?.success)) {
+        applyOtpFromResponse(res);
+        Toast.show(res?.message ?? result.message ?? 'Verification code resent');
+        setResendCooldown(
+          pickOtpCooldownSeconds(res) || RESEND_COOLDOWN_SECONDS,
+        );
         setResendCycle(cycle => cycle + 1);
-      } else if (isOtpCooldownError(res)) {
-        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      } else if (result.cooldown || isOtpCooldownError(res)) {
+        applyOtpFromResponse(res);
+        setResendCooldown(result.seconds || RESEND_COOLDOWN_SECONDS);
         setResendCycle(cycle => cycle + 1);
+        if (result.message) {
+          Toast.show(result.message, Toast.LONG);
+        }
       } else {
         Toast.show(res?.message ?? 'Failed to resend code', Toast.LONG);
       }
     } catch (error) {
       if (isOtpCooldownError(error)) {
-        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+        applyOtpFromResponse(error);
+        setResendCooldown(
+          pickOtpCooldownSeconds(error, 0) || RESEND_COOLDOWN_SECONDS,
+        );
         setResendCycle(cycle => cycle + 1);
         return;
       }
@@ -152,22 +179,25 @@ const VerifyProfileCodeScreen = () => {
               loading={resending}
               onResend={handleResend}
             />
-
-            <View style={styles.flexSpacer} />
-
-            <View style={styles.bottomSection}>
-              <PrimaryButton
-                title={Strings.verifyNumber}
-                onPress={handleVerify}
-                loading={loading}
-                showArrow
-              />
-              <AuthFooterHint
-                text={Strings.verificationTrustHint}
-                style={styles.footerHint}
-              />
-            </View>
           </KeyboardScrollView>
+
+          <View
+            style={[
+              styles.bottomSection,
+              { paddingBottom: getFooterBottomPadding(insets.bottom) },
+            ]}
+          >
+            <PrimaryButton
+              title={Strings.verifyNumber}
+              onPress={handleVerify}
+              loading={loading}
+              showArrow
+            />
+            <AuthFooterHint
+              text={Strings.verificationTrustHint}
+              style={styles.footerHint}
+            />
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </AuthBackground>
@@ -226,16 +256,14 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     // paddingHorizontal: wp( '2%'),
   },
-  flexSpacer: {
-    flex: 1,
-    minHeight: hp('2%'),
-  },
   bottomSection: {
     width: '100%',
-    paddingBottom: AuthStyles.bottomSectionPadding,
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.5%'),
+    flexShrink: 0,
   },
   footerHint: {
-    marginTop: AuthStyles.footerHintTop,
+    marginTop: hp('1.6%'),
   },
 });
 

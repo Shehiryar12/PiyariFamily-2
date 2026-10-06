@@ -56,6 +56,7 @@ import {
   selectProfile,
   setFilterForm,
   setFilterResults,
+  setQuickFilterCatalog,
   useAppDispatch,
   useAppSelector,
 } from '../../Redux';
@@ -141,6 +142,9 @@ const FilterMatchesScreen = () => {
             }
           : defaults;
         setFilterSetup(setup);
+        if (setup.quickFilters.length) {
+          dispatch(setQuickFilterCatalog(setup.quickFilters));
+        }
         setLocation(restored.location);
         setCitySearch(restored.citySearch);
         setEducation(restored.education);
@@ -200,7 +204,7 @@ const FilterMatchesScreen = () => {
     } finally {
       setMetaLoading(false);
     }
-  }, [savedForm]);
+  }, [dispatch, savedForm]);
 
   useFocusEffect(
     useCallback(() => {
@@ -317,6 +321,9 @@ const FilterMatchesScreen = () => {
         const filtered = stabilizeMatchOrder(matches);
         const hydrated = await hydrateMatchImages(filtered);
         dispatch(setFilterForm(currentForm()));
+        if (filterSetup.quickFilters.length) {
+          dispatch(setQuickFilterCatalog(filterSetup.quickFilters));
+        }
         dispatch(
           setFilterResults({
             results: hydrated,
@@ -352,6 +359,7 @@ const FilterMatchesScreen = () => {
     filterSetup.bounds.incomeMax,
     filterSetup.bounds.incomeMin,
     filterSetup.incomeRangeMeta,
+    filterSetup.quickFilters,
     incomeMax,
     incomeMin,
     incomeRange,
@@ -559,7 +567,7 @@ const FilterMatchesScreen = () => {
               </View>
             </View>
           ) : null}
-
+{console.log('maritalOptions', maritalOptions)}
           {maritalOptions.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
