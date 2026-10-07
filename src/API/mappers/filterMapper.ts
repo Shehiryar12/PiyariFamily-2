@@ -139,6 +139,39 @@ const normalizeList = (values?: Array<string | null | undefined>) =>
     ),
   ].sort((left, right) => left.localeCompare(right));
 
+const FILTER_MARITAL_SINGLE = 'Single';
+
+export const toFilterMaritalLabel = (value?: string | null) => {
+  const text = value?.trim() ?? '';
+  if (!text) {
+    return '';
+  }
+
+  const key = text.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (key === 'single' || key === 'never married' || (key.includes('never') && key.includes('married'))) {
+    return FILTER_MARITAL_SINGLE;
+  }
+
+  return text;
+};
+
+export const toFilterMaritalParam = (value?: string | null) => {
+  const text = value?.trim() ?? '';
+  if (!text || text === FILTER_ANY) {
+    return '';
+  }
+
+  const key = text.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (key === 'single' || key === 'never married' || (key.includes('never') && key.includes('married'))) {
+    return 'single';
+  }
+
+  return text;
+};
+
+const normalizeMaritalStatuses = (values: string[]) =>
+  normalizeList(values.map(toFilterMaritalLabel));
+
 const extractProfileList = (response?: MatchListResponse | null) => {
   const normalized = normalizeMatchListResponse(response);
 
@@ -233,8 +266,10 @@ const extractOptionsFromProfiles = (
   religions: normalizeList(
     profiles.map(profile => profile.religion ?? profile.community),
   ),
-  maritalStatuses: normalizeList(
-    profiles.map(profile => profile.marital_status),
+  maritalStatuses: normalizeMaritalStatuses(
+    profiles
+      .map(profile => profile.marital_status)
+      .filter((value): value is string => Boolean(value?.trim())),
   ),
   incomeRanges: [],
 });
@@ -267,6 +302,8 @@ const KNOWN_FILTER_OPTION_KEYS = new Set([
   'religions',
   'marital_statuses',
   'maritalStatuses',
+  'marital_status',
+  'maritalStatus',
   'income_ranges',
   'incomeRanges',
   'monthly_income_ranges',
@@ -386,7 +423,9 @@ const appendFromApplied = (
     qualifications: add(options.qualifications, applied.qualification),
     professions: add(options.professions, applied.profession),
     religions: add(options.religions, applied.religion),
-    maritalStatuses: add(options.maritalStatuses, applied.marital_status),
+    maritalStatuses: normalizeMaritalStatuses(
+      add(options.maritalStatuses, applied.marital_status),
+    ),
     incomeRanges: add(
       options.incomeRanges,
       applied.income_range ?? applied.monthly_income,
@@ -473,12 +512,21 @@ const mapFilterOptionLists = (
         religions: pickOptionList(fromApi.religions).length
           ? pickOptionList(fromApi.religions)
           : fromProfiles.religions,
-        maritalStatuses: pickOptionList(
-          fromApi.marital_statuses,
-          fromApi.maritalStatuses,
-        ).length
-          ? pickOptionList(fromApi.marital_statuses, fromApi.maritalStatuses)
-          : fromProfiles.maritalStatuses,
+        maritalStatuses: normalizeMaritalStatuses(
+          pickOptionList(
+            fromApi.marital_statuses,
+            fromApi.maritalStatuses,
+            fromApi.marital_status,
+            fromApi.maritalStatus,
+          ).length
+            ? pickOptionList(
+                fromApi.marital_statuses,
+                fromApi.maritalStatuses,
+                fromApi.marital_status,
+                fromApi.maritalStatus,
+              )
+            : fromProfiles.maritalStatuses,
+        ),
         incomeRanges: pickOptionList(
           fromApi.income_ranges,
           fromApi.incomeRanges,
@@ -517,7 +565,7 @@ const mapDefaults = (
     qualification: pickString(applied.qualification) || FILTER_ANY,
     profession: pickString(applied.profession) || FILTER_ANY,
     religion: pickString(applied.religion) || FILTER_ANY,
-    maritalStatus: pickString(applied.marital_status),
+    maritalStatus: toFilterMaritalLabel(pickString(applied.marital_status)),
     incomeRange:
       pickFirstString(applied.income_range, applied.monthly_income) ||
       FILTER_ANY,
@@ -786,7 +834,7 @@ export const buildMatchFilterParams = ({
   const params: MatchFilterParams = {};
 
   if (marital.trim() && marital !== FILTER_ANY) {
-    params.marital_status = marital.trim();
+    params.marital_status = toFilterMaritalParam(marital);
   }
 
   if (education && education !== FILTER_ANY) {
@@ -838,7 +886,9 @@ export const buildMatchFilterParams = ({
       return;
     }
 
-    params[toFilterQueryKey(key) || key] = text;
+    const queryKey = toFilterQueryKey(key) || key;
+    params[queryKey] =
+      queryKey === 'marital_status' ? toFilterMaritalParam(text) : text;
   });
 
   Object.entries(activeQuickFilters).forEach(([key, enabled]) => {
@@ -857,6 +907,10 @@ export const buildMatchFilterParams = ({
       .map(([key]) => key),
     { profileCity, latitude, longitude },
   );
+
+  if (params.marital_status) {
+    params.marital_status = toFilterMaritalParam(String(params.marital_status));
+  }
 
   return params;
 };

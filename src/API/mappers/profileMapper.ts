@@ -230,8 +230,9 @@ const mergeVisibilityFlags = (
 };
 
 const MARITAL_STATUS_MAP: Record<string, string> = {
-  single: 'Never Married',
-  'never married': 'Never Married',
+  single: 'Single',
+  'never married': 'Single',
+  never_married: 'Single',
   divorced: 'Divorced',
   widowed: 'Widowed',
 };
@@ -1292,14 +1293,20 @@ const buildLocation = (profile: ProfileApiData) => {
   return parts.join(', ');
 };
 
-const mapMaritalStatus = (value?: string | null) => {
+export const toDisplayMaritalStatus = (value?: string | null) => {
   if (!value) {
     return '';
   }
 
-  const key = value.toLowerCase();
+  const key = value.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (key === 'single' || key === 'never married' || (key.includes('never') && key.includes('married'))) {
+    return 'Single';
+  }
+
   return MARITAL_STATUS_MAP[key] ?? toTitleCase(value);
 };
+
+const mapMaritalStatus = (value?: string | null) => toDisplayMaritalStatus(value);
 
 export const mapProfileToForm = (
   profile?: ProfileApiData | null,

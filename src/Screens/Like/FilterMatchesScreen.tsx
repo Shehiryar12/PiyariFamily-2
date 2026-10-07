@@ -36,6 +36,8 @@ import {
   mapFilterMatchGroups,
   mapFilterSetup,
   pickMatchListTotal,
+  toFilterMaritalLabel,
+  toFilterMaritalParam,
   resolveUserCity,
   withAnyOption,
   type FilterSetupData,
@@ -54,6 +56,7 @@ import {
 import {
   selectFilterForm,
   selectProfile,
+  clearFilterResults,
   setFilterForm,
   setFilterResults,
   setQuickFilterCatalog,
@@ -124,6 +127,7 @@ const FilterMatchesScreen = () => {
 
     try {
       const res = await Api.getMatchSearch();
+      console.log('res', res);
       if (isApiSuccess(res?.status, res?.data?.success)) {
         const setup = mapFilterSetup(res?.data);
         const defaults = applyDefaults(setup);
@@ -150,7 +154,7 @@ const FilterMatchesScreen = () => {
         setEducation(restored.education);
         setProfession(restored.profession);
         setReligion(restored.religion);
-        setMarital(restored.marital);
+        setMarital(toFilterMaritalLabel(restored.marital));
         setAgeMin(
           Math.min(
             setup.bounds.ageMax - 1,
@@ -244,6 +248,9 @@ const FilterMatchesScreen = () => {
     setExtraValues(defaults.extraValues);
     setActiveQuickFilters(defaults.activeQuickFilters);
     dispatch(setFilterForm(defaults));
+    dispatch(clearFilterResults());
+    Toast.show('Filters reset', Toast.SHORT);
+    navigation.goBack();
   };
 
   const handleClearAll = () => {
@@ -280,6 +287,9 @@ const FilterMatchesScreen = () => {
     setExtraValues(cleared.extraValues);
     setActiveQuickFilters(cleared.activeQuickFilters);
     dispatch(setFilterForm(cleared));
+    dispatch(clearFilterResults());
+    Toast.show('Filters cleared', Toast.SHORT);
+    navigation.goBack();
   };
 
   const applyFilters = useCallback(async () => {
@@ -296,7 +306,7 @@ const FilterMatchesScreen = () => {
         education,
         profession,
         religion,
-        marital,
+        marital: toFilterMaritalParam(marital) || marital,
         ageMin,
         ageMax,
         ageBoundMin: filterSetup.bounds.ageMin,
@@ -567,7 +577,6 @@ const FilterMatchesScreen = () => {
               </View>
             </View>
           ) : null}
-{console.log('maritalOptions', maritalOptions)}
           {maritalOptions.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>

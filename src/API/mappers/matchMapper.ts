@@ -1,7 +1,7 @@
 import { ImageSourcePropType } from 'react-native';
 import { Images } from '../../Assets';
 import type { BasicDetail, QuickInfo } from '../../Constant/MatchProfiles';
-import { pickImageUrl, parseVisibilityFlag } from './profileMapper';
+import { pickImageUrl, parseVisibilityFlag, toDisplayMaritalStatus } from './profileMapper';
 import { toRemoteImageSource } from '../mediaUrl';
 import {
   applyLocationFilterParams,
@@ -1610,7 +1610,7 @@ export const mapMatchProfileDetail = (
     pickString(preview?.location?.split(',')[0]) ||
     '-';
   const height = pickString(profile.height) || '-';
-  const maritalStatus = pickString(profile.marital_status) || '-';
+  const maritalStatus = toDisplayMaritalStatus(profile.marital_status) || '-';
   const motherTongue = pickString(profile.mother_tongue) || '-';
 
   const quickInfo = [

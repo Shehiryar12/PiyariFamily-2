@@ -39,6 +39,7 @@ export const MARITAL_STATUS_TO_API: Record<MaritalStatus, string> = {
 export const MARITAL_STATUS_FROM_API: Record<string, MaritalStatus> = {
   single: 'Single',
   'never married': 'Single',
+  never_married: 'Single',
   divorced: 'Divorced',
   widowed: 'Widowed',
 };
@@ -85,7 +86,7 @@ export const RESIDENCE_STATUS_FROM_API: Record<string, ResidenceStatus> = {
 };
 
 export const EDIT_MARITAL_STATUS_OPTIONS = [
-  'Never Married',
+  'Single',
   'Divorced',
   'Widowed',
 ] as const;

@@ -62,6 +62,8 @@ export {
   mapExtraFilterSections,
   mapQuickFilters,
   toFilterQueryKey,
+  toFilterMaritalLabel,
+  toFilterMaritalParam,
   withAnyOption,
   DEFAULT_AGE_MAX,
   DEFAULT_AGE_MIN,
@@ -179,7 +181,7 @@ export type {
   ShortlistTab,
   ShortlistedProfile,
 } from './mappers/shortlistMapper';
-export { mapProfileToForm, mapFormToProfilePayload, mapProfileToSettings, normalizeProfileData, resolveProfileData, saveProfileCache, mapCompleteProfile, isProfileMarkedComplete, extractPhotoUrl, extractProfileGalleryPhotos, extractProfilePhotoSlots, pickImageUrl, parseVisibilityFlag, toApiMaritalStatus } from './mappers/profileMapper';
+export { mapProfileToForm, mapFormToProfilePayload, mapProfileToSettings, normalizeProfileData, resolveProfileData, saveProfileCache, mapCompleteProfile, isProfileMarkedComplete, extractPhotoUrl, extractProfileGalleryPhotos, extractProfilePhotoSlots, pickImageUrl, parseVisibilityFlag, toApiMaritalStatus, toDisplayMaritalStatus } from './mappers/profileMapper';
 export type { EditProfileFormData, ProfileApiData, ProfileGalleryPhoto, SettingsProfileData, PhotoVisibilityFlags, PhotoVisibilityResponse, CompleteProfileResponse } from './mappers/profileMapper';
 export { profileStorage } from './profileStorage';
 export { accountStorage } from './accountStorage';

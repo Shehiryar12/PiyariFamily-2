@@ -236,7 +236,7 @@ export const Strings = {
   maritalStatusDetail: 'Marital Status',
   communityDetail: 'Community',
   motherTongueDetail: 'Mother Tongue',
-  neverMarried: 'Never Married',
+  neverMarried: 'Single',
   sendInterest: 'Send Interest',
   sendRequest: 'Send Request',
   nextBtn: 'Next',

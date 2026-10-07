@@ -126,7 +126,7 @@ describe('GET /matches/filter', () => {
     expect(setup.options.religions).toEqual(['Christian', 'Islam']);
     expect(setup.options.maritalStatuses).toEqual([
       'Divorced',
-      'Never Married',
+      'Single',
     ]);
     expect(setup.options.incomeRanges).toEqual([
       '50K to 90K',
@@ -192,7 +192,7 @@ describe('GET /matches/filter', () => {
       qualification: 'Masters',
       profession: 'Doctor',
       religion: 'Islam',
-      marital_status: 'Never Married',
+      marital_status: 'single',
       age_min: 25,
       age_max: 40,
       monthly_income_min: 50000,
@@ -233,13 +233,30 @@ describe('GET /matches/filter', () => {
     });
   });
 
-  it('does not remap marital labels to hardcoded API aliases', () => {
+  it('shows Single instead of Never Married and sends single to the API', () => {
+    const setup = mapFilterSetup({
+      success: 200,
+      filter_options: {
+        marital_statuses: ['single', 'Single', 'Never Married', 'Divorced'],
+      },
+    });
+
+    expect(setup.options.maritalStatuses).toEqual([
+      'Divorced',
+      'Single',
+    ]);
     expect(
       buildMatchFilterParams({
         ...emptyForm,
         marital: 'Single',
       }),
-    ).toEqual({ marital_status: 'Single' });
+    ).toEqual({ marital_status: 'single' });
+    expect(
+      buildMatchFilterParams({
+        ...emptyForm,
+        marital: 'Never Married',
+      }),
+    ).toEqual({ marital_status: 'single' });
   });
 
   it('parses income labels dynamically and falls back to the raw option', () => {

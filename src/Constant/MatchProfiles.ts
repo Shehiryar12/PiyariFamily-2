@@ -66,7 +66,7 @@ export const PROFILE_DETAILS: Record<string, ProfileDetail> = {
       {
         icon: 'heart-outline',
         label: 'Marital Status',
-        value: 'Never Married',
+        value: 'Single',
       },
       {
         iconSource: Images.religionIcon,
@@ -110,7 +110,7 @@ export const PROFILE_DETAILS: Record<string, ProfileDetail> = {
       {
         icon: 'heart-outline',
         label: 'Marital Status',
-        value: 'Never Married',
+        value: 'Single',
       },
       {
         iconSource: Images.religionIcon,

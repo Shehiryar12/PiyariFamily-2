@@ -33,7 +33,7 @@ describe('edit profile marital status and community', () => {
       community: 'sunni',
     });
 
-    expect(form.maritalStatus).toBe('Never Married');
+    expect(form.maritalStatus).toBe('Single');
     expect(form.community).toBe('Sunni');
   });
 

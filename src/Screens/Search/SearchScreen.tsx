@@ -364,6 +364,14 @@ const SearchScreen = () => {
   }, [applySearchMeta, storedQuickFilters.length]);
 
   useEffect(() => {
+    if (filterApplied) {
+      return;
+    }
+
+    lastSearchKeyRef.current = '';
+  }, [filterApplied]);
+
+  useEffect(() => {
     if (showingFilterResults) {
       loadSearchCatalog();
       return;
