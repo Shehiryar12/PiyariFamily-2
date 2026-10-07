@@ -66,10 +66,23 @@ export type SubscriptionApiPlan = {
   duration_unit?: string | null;
   duration_label?: string | null;
   duration_days?: number | string | null;
+  validity?: number | string | null;
+  validity_label?: string | null;
+  interval?: number | string | null;
+  interval_unit?: string | null;
   period?: string | null;
+  billing_period?: string | null;
   type?: string | null;
   payment_status?: string | null;
   badge?: string | null;
+  tag?: string | null;
+  label?: string | null;
+  highlight?: string | null;
+  ribbon?: string | null;
+  is_popular?: boolean | number | string | null;
+  popular?: boolean | number | string | null;
+  is_recommended?: boolean | number | string | null;
+  recommended?: boolean | number | string | null;
   features?: SubscriptionApiFeatures;
   benefits?: string[] | null;
   is_current?: boolean | number | null;
@@ -184,19 +197,73 @@ export const mapPlanFeatures = (plan?: SubscriptionApiPlan | null) => {
   return [];
 };
 
+const isTruthyFlag = (value: unknown) =>
+  value === true || value === 1 || value === '1' || value === 'true';
+
+const isPlanTypeLabel = (value: string) => {
+  const key = value.trim().toLowerCase();
+  return (
+    key === 'free' ||
+    key === 'vip' ||
+    key === 'vvip' ||
+    key === 'plan' ||
+    normalizePlanTier(value) !== null
+  );
+};
+
 const formatDurationLabel = (plan?: SubscriptionApiPlan | null) => {
-  const labeled = pickString(plan?.duration_label);
+  const labeled = pickString(plan?.duration_label, plan?.validity_label);
   if (labeled) {
     return labeled;
   }
 
-  const duration = pickString(plan?.duration, plan?.duration_days);
-  const unit = pickString(plan?.duration_unit);
+  const duration = pickString(
+    plan?.duration,
+    plan?.duration_days,
+    plan?.validity,
+    plan?.interval,
+  );
+  const unit = pickString(plan?.duration_unit, plan?.interval_unit);
+
+  if (duration && /[a-zA-Z]/.test(duration)) {
+    return duration;
+  }
+
   if (duration && unit) {
     return `${duration} ${unit}`;
   }
 
-  return pickString(plan?.period);
+  if (duration && Number.isFinite(Number(duration))) {
+    const count = Number(duration);
+    return `${count} ${count === 1 ? 'Day' : 'Days'}`;
+  }
+
+  return pickString(plan?.period, plan?.billing_period);
+};
+
+const pickDisplayBadge = (plan?: SubscriptionApiPlan | null) => {
+  if (!plan) {
+    return '';
+  }
+
+  const raw = pickString(
+    plan.badge,
+    plan.tag,
+    plan.label,
+    plan.highlight,
+    plan.ribbon,
+  );
+  const marketingBadge = raw && !isPlanTypeLabel(raw) ? raw : '';
+
+  if (isTruthyFlag(plan.is_popular) || isTruthyFlag(plan.popular)) {
+    return marketingBadge || 'Popular';
+  }
+
+  if (isTruthyFlag(plan.is_recommended) || isTruthyFlag(plan.recommended)) {
+    return marketingBadge || 'Recommended';
+  }
+
+  return marketingBadge;
 };
 
 const emptyPaidPlan = (
@@ -257,9 +324,9 @@ const buildPaidPlan = (
     ...(fallback.darkGradient ? { darkGradient: true } : {}),
     apiId: pickString(apiPlan.id),
     title:
-      pickString(apiPlan.name, apiPlan.title, apiPlan.plan, apiPlan.badge) ||
+      pickString(apiPlan.name, apiPlan.title, apiPlan.plan) ||
       (tier === 'VIP' ? 'VIP Plan' : 'VVIP Plan'),
-    badge: pickString(apiPlan.badge, apiPlan.type),
+    badge: pickDisplayBadge(apiPlan),
     price,
     priceLabel:
       pickString(apiPlan.price_label) || formatPriceLabel(price, currency),
@@ -274,8 +341,8 @@ const buildFreePlan = (
   apiPlan?: SubscriptionApiPlan,
   extraFeatures?: string[],
 ): SubscriptionFreePlanData => ({
-  title: pickString(apiPlan?.name, apiPlan?.title, apiPlan?.badge) || 'Free',
-  badge: pickString(apiPlan?.badge, apiPlan?.type),
+  title: pickString(apiPlan?.name, apiPlan?.title, apiPlan?.type) || 'Free',
+  badge: pickDisplayBadge(apiPlan),
   apiId: pickString(apiPlan?.id),
   durationLabel: formatDurationLabel(apiPlan),
   paymentStatus: pickString(apiPlan?.payment_status),
@@ -378,9 +445,6 @@ const buildCompareRows = (
     vvip: vvipFeatures.includes(label),
   }));
 };
-
-const isTruthyFlag = (value: unknown) =>
-  value === true || value === 1 || value === '1' || value === 'true';
 
 const isPaidStatus = (status: string) => {
   const key = status.toLowerCase();

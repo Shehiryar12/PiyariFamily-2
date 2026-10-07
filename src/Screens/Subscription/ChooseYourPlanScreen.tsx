@@ -54,7 +54,6 @@ const ChooseYourPlanScreen = () => {
 
     try {
       const res = await Api.getSubscriptions();
-
       if (isApiSuccess(res?.status, res?.data?.success)) {
         setPlans(mapSubscriptions(res?.data));
       } else {
@@ -124,11 +123,26 @@ const ChooseYourPlanScreen = () => {
     </View>
   );
 
+  const renderPlanBadge = (badge?: string, light = false) => {
+    if (!badge) {
+      return null;
+    }
+
+    return (
+      <View style={[styles.planBadge, light && styles.planBadgeLight]}>
+        <Text style={[styles.planBadgeText, light && styles.planBadgeTextLight]}>
+          {badge.toUpperCase()}
+        </Text>
+      </View>
+    );
+  };
+
   const renderPlanCardHeader = (
     icon: string,
     title: string,
     duration: string,
     lightIcon = false,
+    badge = '',
   ) => (
     <View style={styles.planTopRow}>
       <View style={styles.planIconBadge}>
@@ -138,9 +152,9 @@ const ChooseYourPlanScreen = () => {
           color={lightIcon ? Colors.white : Colors.gold}
         />
       </View>
-      <View style={styles.planTitleWrap}>
+      <View style={[styles.planTitleWrap, Boolean(badge) && styles.titleWithBadge]}>
         <Text style={styles.planTitle}>{title}</Text>
-        <Text style={styles.planDuration}>{duration}</Text>
+        {duration ? <Text style={styles.planDuration}>{duration}</Text> : null}
       </View>
     </View>
   );
@@ -167,6 +181,7 @@ const ChooseYourPlanScreen = () => {
         <Text style={styles.subtitle}>{Strings.choosePlanSubtitle}</Text>
 
         <View style={styles.freeCard}>
+          {renderPlanBadge(plans.freePlan.badge)}
           <View style={styles.freeTopRow}>
             <View style={styles.freeIconBadge}>
               <Icon
@@ -175,9 +190,21 @@ const ChooseYourPlanScreen = () => {
                 color={Colors.textLight}
               />
             </View>
-            <Text style={styles.freeTitle}>
-              {(plans.freePlan.badge || plans.freePlan.title || Strings.freePlan).toUpperCase()}
-            </Text>
+            <View
+              style={[
+                styles.freeTitleWrap,
+                Boolean(plans.freePlan.badge) && styles.titleWithBadge,
+              ]}
+            >
+              <Text style={styles.freeTitle}>
+                {(plans.freePlan.title || Strings.freePlan).toUpperCase()}
+              </Text>
+              {plans.freePlan.durationLabel ? (
+                <Text style={styles.freeDuration}>
+                  {plans.freePlan.durationLabel}
+                </Text>
+              ) : null}
+            </View>
           </View>
           {plans.freePlan.features.map(item => renderPlanFeature(item))}
         </View>
@@ -189,11 +216,13 @@ const ChooseYourPlanScreen = () => {
             end={{ x: 0, y: 1 }}
             style={styles.premiumCard}
           >
+            {renderPlanBadge(plans.vipPlan.badge, true)}
             {renderPlanCardHeader(
               'star',
               plans.vipPlan.title,
               plans.vipPlan.durationLabel,
               true,
+              plans.vipPlan.badge,
             )}
             <Text style={styles.planPrice}>{plans.vipPlan.priceLabel}</Text>
             {plans.vipPlan.features.map(item => renderPlanFeature(item, true))}
@@ -215,11 +244,13 @@ const ChooseYourPlanScreen = () => {
             end={{ x: 0, y: 1 }}
             style={styles.premiumCard}
           >
+            {renderPlanBadge(plans.vvipPlan.badge, true)}
             {renderPlanCardHeader(
               'crown',
               plans.vvipPlan.title,
               plans.vvipPlan.durationLabel,
               true,
+              plans.vvipPlan.badge,
             )}
             <Text style={styles.planPrice}>{plans.vvipPlan.priceLabel}</Text>
             {plans.vvipPlan.features.map(item => renderPlanFeature(item, true))}
@@ -314,12 +345,41 @@ const styles = StyleSheet.create({
     borderRadius: wp('4.5%'),
     padding: wp('4.5%'),
     marginBottom: hp('1.5%'),
+    overflow: 'hidden',
   },
   freeTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp('2.5%'),
     marginBottom: hp('1.2%'),
+  },
+  freeTitleWrap: {
+    flex: 1,
+  },
+  titleWithBadge: {
+    paddingRight: wp('16%'),
+  },
+  planBadge: {
+    position: 'absolute',
+    top: hp('1.2%'),
+    right: wp('3.5%'),
+    backgroundColor: Colors.primary,
+    paddingHorizontal: wp('2.6%'),
+    paddingVertical: hp('0.35%'),
+    borderRadius: wp('4%'),
+    zIndex: 2,
+  },
+  planBadgeLight: {
+    backgroundColor: Colors.gold,
+  },
+  planBadgeText: {
+    fontSize: fs(9),
+    fontFamily: Fonts.bold,
+    color: Colors.white,
+    letterSpacing: 0.5,
+  },
+  planBadgeTextLight: {
+    color: Colors.white,
   },
   freeIconBadge: {
     width: wp('8%'),
@@ -334,6 +394,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.textLight,
     letterSpacing: 0.6,
+  },
+  freeDuration: {
+    fontSize: fs(11),
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+    marginTop: hp('0.15%'),
   },
   featureRow: {
     flexDirection: 'row',

@@ -112,13 +112,13 @@ const ComparePlansScreen = () => {
   const renderPlanTabs = () => (
     <View style={styles.planTabsRow}>
       <View style={styles.tabFree}>
-        <Text style={styles.tabFreeText}>{plans.freePlan.badge || plans.freePlan.title || 'Free'}</Text>
+        <Text style={styles.tabFreeText}>{plans.freePlan.title || 'Free'}</Text>
       </View>
       <View style={styles.tabVip}>
-        <Text style={styles.tabVipText}>{plans.vipPlan.badge || plans.vipPlan.title || 'VIP'}</Text>
+        <Text style={styles.tabVipText}>{plans.vipPlan.title || 'VIP'}</Text>
       </View>
       <View style={styles.tabVvip}>
-        <Text style={styles.tabVvipText}>{plans.vvipPlan.badge || plans.vvipPlan.title || 'VVIP'}</Text>
+        <Text style={styles.tabVvipText}>{plans.vvipPlan.title || 'VVIP'}</Text>
       </View>
     </View>
   );

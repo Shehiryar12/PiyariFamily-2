@@ -11,7 +11,10 @@ import {
 } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import ScreenHeader from '../../Components/ScreenHeader';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
@@ -19,6 +22,7 @@ import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
+import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { useHideTabBar } from '../../Functions/useHideTabBar';
 import { fs, hp, wp } from '../../Functions/responsive';
 
@@ -71,6 +75,7 @@ const CompletePaymentScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
   const { plan, priceLabel } = route.params;
+  const insets = useSafeAreaInsets();
   const [method, setMethod] = useState<PaymentMethod>('google');
   const [cardExpanded, setCardExpanded] = useState(true);
   const [cardHolder, setCardHolder] = useState('');
@@ -124,29 +129,15 @@ const CompletePaymentScreen = () => {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <ScrollView
+          style={styles.flex}
           showsVerticalScrollIndicator={true}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          <TouchableOpacity
-            style={styles.secureBar}
-            activeOpacity={0.9}
-            onPress={handlePay}
-          >
-            <View style={styles.secureBarContent}>
-              <Icon name="lock-outline" size={fs(18)} color={Colors.white} />
-              <Text style={styles.secureBarText}>
-                {Strings.paySecurely.replace(
-                  '{amount}',
-                  priceLabel.replace('PKR ', ''),
-                )}
-              </Text>
-              <Icon name="arrow-right" size={fs(18)} color={Colors.white} />
-            </View>
-          </TouchableOpacity>
-
           <View style={styles.planSummary}>
             <View style={styles.crownBadge}>
               <Icon name="crown" size={fs(20)} color={Colors.white} />
@@ -255,6 +246,30 @@ const CompletePaymentScreen = () => {
             </Text>
           </View>
         </ScrollView>
+
+        <View
+          style={[
+            styles.footer,
+            { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.secureBar}
+            activeOpacity={0.9}
+            onPress={handlePay}
+          >
+            <View style={styles.secureBarContent}>
+              <Icon name="lock-outline" size={fs(18)} color={Colors.white} />
+              <Text style={styles.secureBarText}>
+                {Strings.paySecurely.replace(
+                  '{amount}',
+                  priceLabel.replace('PKR ', ''),
+                )}
+              </Text>
+              <Icon name="arrow-right" size={fs(18)} color={Colors.white} />
+            </View>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -285,7 +300,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: AuthStyles.horizontalPadding,
-    paddingBottom: hp('3%'),
+    paddingBottom: hp('2%'),
+  },
+  footer: {
+    paddingHorizontal: AuthStyles.horizontalPadding,
+    paddingTop: hp('1.2%'),
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+    backgroundColor: Colors.background,
   },
   secureBar: {
     flexDirection: 'row',
@@ -295,7 +317,6 @@ const styles = StyleSheet.create({
     borderRadius: wp('4%'),
     paddingHorizontal: wp('4.5%'),
     paddingVertical: hp('1.6%'),
-    marginBottom: hp('2%'),
   },
   secureBarContent: {
     flex: 1,

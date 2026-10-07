@@ -56,6 +56,43 @@ describe('GET /subscriptions', () => {
     expect(plans.compareRows[0].label).toBe('Basic search');
     expect(plans.currentPlan.title).toBe('Free');
     expect(plans.currentPlan.isPaid).toBe(false);
+    expect(plans.freePlan.badge).toBe('');
+    expect(plans.vipPlan.badge).toBe('');
+  });
+
+  it('maps marketing badges and free duration without using badge as the title', () => {
+    const plans = mapSubscriptions({
+      success: 200,
+      plans: [
+        {
+          id: 5,
+          name: 'Free',
+          type: 'Free',
+          duration: 30,
+          duration_unit: 'days',
+          duration_label: '30 Days',
+          badge: 'Free',
+          features: { display: ['Basic search'] },
+        },
+        {
+          id: 6,
+          name: 'VIP',
+          type: 'VIP',
+          price: 2499,
+          duration_label: '30 Days',
+          badge: 'Popular',
+          is_popular: true,
+          features: { display: ['Unlimited Chats'] },
+        },
+      ],
+    });
+
+    expect(plans.freePlan.title).toBe('Free');
+    expect(plans.freePlan.durationLabel).toBe('30 Days');
+    expect(plans.freePlan.badge).toBe('');
+    expect(plans.vipPlan.title).toBe('VIP');
+    expect(plans.vipPlan.badge).toBe('Popular');
+    expect(plans.vipPlan.durationLabel).toBe('30 Days');
   });
 
   it('does not copy hardcoded PLAN_OPTIONS prices onto mapped VIP', () => {
