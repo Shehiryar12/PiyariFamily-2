@@ -109,7 +109,7 @@ const PAYMENT_METHODS: MethodConfig[] = [
 const CompletePaymentScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
-  const { plan, price, priceLabel, subscriptionId } = route.params;
+  const { plan, price, priceLabel, subscriptionId, isUpgrade } = route.params;
   const insets = useSafeAreaInsets();
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [cardExpanded, setCardExpanded] = useState(true);
@@ -135,39 +135,45 @@ const CompletePaymentScreen = () => {
     const expiryDate = expiry.trim();
     const cvvCode = digitsOnly(cvv);
 
-    if (!holderName || !number || !expiryDate || !cvvCode) {
-      setMethod('card');
-      setCardExpanded(true);
-      Toast.show('Please fill in all card details', Toast.LONG);
-      return;
-    }
+    if (!isUpgrade) {
+      if (!holderName || !number || !expiryDate || !cvvCode) {
+        setMethod('card');
+        setCardExpanded(true);
+        Toast.show('Please fill in all card details', Toast.LONG);
+        return;
+      }
 
-    if (number.length < 13 || number.length > 16) {
-      Toast.show('Please enter a valid card number', Toast.LONG);
-      return;
-    }
+      if (number.length < 13 || number.length > 16) {
+        Toast.show('Please enter a valid card number', Toast.LONG);
+        return;
+      }
 
-    if (!isValidExpiry(expiryDate)) {
-      Toast.show('Please enter expiry as MM/YY', Toast.LONG);
-      return;
-    }
+      if (!isValidExpiry(expiryDate)) {
+        Toast.show('Please enter expiry as MM/YY', Toast.LONG);
+        return;
+      }
 
-    if (cvvCode.length < 3 || cvvCode.length > 4) {
-      Toast.show('Please enter a valid CVV', Toast.LONG);
-      return;
+      if (cvvCode.length < 3 || cvvCode.length > 4) {
+        Toast.show('Please enter a valid CVV', Toast.LONG);
+        return;
+      }
     }
 
     setPaying(true);
 
     try {
-
-      const res = await Api.subscribe({
-        subscription_id: subscriptionId,
-        card_holder_name: holderName,
-        card_number: number,
-        expiry_date: expiryDate,
-        cvv: cvvCode,
-      });
+      const res = isUpgrade
+        ? await Api.upgradeSubscription({
+            payment_method: method === 'card' ? 'bank' : method,
+            subscription_id: subscriptionId,
+          })
+        : await Api.subscribe({
+            subscription_id: subscriptionId,
+            card_holder_name: holderName,
+            card_number: number,
+            expiry_date: expiryDate,
+            cvv: cvvCode,
+          });
       if (isApiSuccess(res.status, res.data?.success) && res.data?.success !== false) {
         const payment = mapSubscribePayment(res.data, price, priceLabel);
         Toast.show(res.data?.message ?? 'Payment successful', Toast.LONG);
@@ -253,9 +259,16 @@ const CompletePaymentScreen = () => {
             <View style={styles.crownBadge}>
               <Icon name="crown" size={fs(20)} color={Colors.white} />
             </View>
-            <Text style={styles.planName}>
-              {plan === 'VIP' ? Strings.vipPlan : Strings.vvipPlan}
-            </Text>
+            <View style={styles.planNameWrap}>
+              <Text style={styles.planName}>
+                {plan === 'VIP' ? Strings.vipPlan : Strings.vvipPlan}
+              </Text>
+              {isUpgrade ? (
+                <Text style={styles.upgradeHint}>
+                  {Strings.upgradingCurrentPackage}
+                </Text>
+              ) : null}
+            </View>
             <Text style={styles.planPrice}>
               {priceLabel}
               {Strings.perMonth}
@@ -469,11 +482,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  planName: {
+  planNameWrap: {
     flex: 1,
+  },
+  planName: {
     fontSize: fs(15),
     fontFamily: Fonts.bold,
     color: Colors.label,
+  },
+  upgradeHint: {
+    fontSize: fs(11),
+    fontFamily: Fonts.regular,
+    color: Colors.gold,
+    marginTop: hp('0.2%'),
   },
   planPrice: {
     fontSize: fs(15),

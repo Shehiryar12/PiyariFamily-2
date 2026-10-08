@@ -2,12 +2,15 @@ import { CommonActions, NavigationProp, ParamListBase } from '@react-navigation/
 import { ProfileStackParamList } from '../Navigation/ProfileStackNavigator';
 import { getTabNavigation } from './tabNavigation';
 
-export const toCompletePaymentParams = (plan: {
-  id: string;
-  price: number;
-  priceLabel: string;
-  apiId: string;
-}): ProfileStackParamList['CompletePayment'] | null => {
+export const toCompletePaymentParams = (
+  plan: {
+    id: string;
+    price: number;
+    priceLabel: string;
+    apiId: string;
+  },
+  extra?: { isUpgrade?: boolean },
+): ProfileStackParamList['CompletePayment'] | null => {
   if (!plan.apiId || (plan.id !== 'VIP' && plan.id !== 'VVIP')) {
     return null;
   }
@@ -17,6 +20,7 @@ export const toCompletePaymentParams = (plan: {
     price: plan.price,
     priceLabel: plan.priceLabel,
     subscriptionId: plan.apiId,
+    ...(extra?.isUpgrade ? { isUpgrade: true } : {}),
   };
 };
 

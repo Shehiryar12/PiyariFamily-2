@@ -634,10 +634,14 @@ export const Strings = {
   planRenewalSummary: 'PKR 2,499/month · Renews {date}',
   upgradeToPlatinum: 'Upgrade to Platinum',
   upgradeToPlatinumSubtitle: 'PKR 999/mo · More features',
+  upgradingCurrentPackage: 'Upgrading your current package',
   changeBillingCycle: 'Change Billing Cycle',
   changeBillingSubtitle: 'Switch to annual & save 40%',
   cancelSubscription: 'Cancel Subscription',
   cancelSubscriptionSubtitle: 'Your plan stays active until renewal',
+  cancelSubscriptionConfirmTitle: 'Cancel Subscription?',
+  cancelSubscriptionConfirmMessage:
+    'Your plan stays active until renewal. Do you want to cancel?',
   subscriptionSupportTitle:
     'Need help? Contact our support team within 24 hours for any billing issues.',
   contactSupportWhatsapp: 'Contact Support / WhatsApp',

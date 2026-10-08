@@ -38,6 +38,7 @@ export type ProfileApiData = {
   is_serious_member?: boolean;
   show_verified_badge?: boolean;
   membership_badge?: string | null;
+  plan_type?: string | null;
   location?: string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
@@ -435,8 +436,14 @@ const overlayProfileFlags = (
       profile.show_verified_badge = extra.show_verified_badge;
     }
     const membershipBadge = source.membership_badge ?? source.membershipBadge;
-    if (typeof membershipBadge === 'string' && membershipBadge.trim()) {
+    if (membershipBadge === null || membershipBadge === '') {
+      profile.membership_badge = null;
+    } else if (typeof membershipBadge === 'string' && membershipBadge.trim()) {
       profile.membership_badge = membershipBadge.trim();
+    }
+    const planType = source.plan_type ?? source.planType;
+    if (typeof planType === 'string') {
+      profile.plan_type = planType.trim() || null;
     }
     if (extra.phone_verified !== undefined) {
       profile.phone_verified = extra.phone_verified;
@@ -632,6 +639,11 @@ const mapGetProfileFields = (
         : String(membershipBadge);
   }
 
+  const planType = pick('plan_type', 'planType');
+  if (typeof planType === 'string') {
+    profile.plan_type = planType.trim() || null;
+  }
+
   const profession = pick('profession', 'job_title');
   if (typeof profession === 'string') {
     profile.profession = profession;
@@ -764,10 +776,14 @@ export const resolveProfileData = (source: unknown): ProfileApiData => {
       fromApi.show_verified_badge,
       cached?.show_verified_badge,
     ),
-    membership_badge: pickProfileField(
-      fromApi.membership_badge,
-      cached?.membership_badge,
-    ),
+    membership_badge:
+      fromApi.membership_badge === null ||
+      fromApi.membership_badge === '' ||
+      String(fromApi.plan_type ?? '').toLowerCase() === 'free'
+        ? null
+        : pickProfileField(fromApi.membership_badge, cached?.membership_badge) ??
+          null,
+    plan_type: pickProfileField(fromApi.plan_type, cached?.plan_type) ?? null,
     profile_completed: pickProfileField(
       fromApi.profile_completed,
       cached?.profile_completed,
@@ -1383,7 +1399,10 @@ export const mapProfileToSettings = (
     isVerified: Boolean(profile?.is_verified),
     isProfileComplete: parseVisibilityFlag(profile?.profile_completed) === true,
     isSeriousMember: parseVisibilityFlag(profile?.is_serious_member) === true,
-    membershipBadge: String(profile?.membership_badge ?? '').trim(),
+    membershipBadge:
+      String(profile?.plan_type ?? '').toLowerCase() === 'free'
+        ? ''
+        : String(profile?.membership_badge ?? '').trim(),
     showVerifiedBadge:
       parseVisibilityFlag(profile?.show_verified_badge) === true ||
       parseVisibilityFlag(

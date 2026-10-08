@@ -80,12 +80,27 @@ const ProfileBadge = ({ icon, label }: { icon: string; label: string }) => (
 );
 
 const pickMembershipBadge = (payload: any) => {
+  const nested =
+    payload?.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+      ? payload.data
+      : payload;
+  const planType = String(
+    nested?.plan_type ?? payload?.plan_type ?? '',
+  ).trim();
+
+  if (planType.toLowerCase() === 'free') {
+    return '';
+  }
+
   const value =
-    payload?.membership_badge ||
-    payload?.data?.membership_badge ||
-    payload?.user?.membership_badge ||
-    payload?.data?.user?.membership_badge ||
-    '';
+    nested?.membership_badge ??
+    payload?.membership_badge ??
+    payload?.user?.membership_badge ??
+    nested?.user?.membership_badge;
+
+  if (value == null || value === '') {
+    return '';
+  }
 
   if (typeof value !== 'string') {
     return '';
@@ -108,7 +123,6 @@ const SettingsScreen = () => {
   const profilePhoto = useAppSelector(selectProfilePhoto);
   const [profileName, setProfileName] = useState(user?.name ?? '');
   const [profileMeta, setProfileMeta] = useState('');
-  // const [isVerified, setIsVerified] = useState(false);
   const [isSeriousMember, setIsSeriousMember] = useState(false);
   const [showVerifiedBadge, setShowVerifiedBadge] = useState(false);
   const [membershipBadge, setMembershipBadge] = useState('');
@@ -136,9 +150,7 @@ const SettingsScreen = () => {
     setProfileName(profile.name);
     setProfileMeta(profile.meta);
     setIsSeriousMember(profile.isSeriousMember);
-    setMembershipBadge(
-      pickMembershipBadge(rawProfile) || profile.membershipBadge,
-    );
+    setMembershipBadge(pickMembershipBadge(rawProfile));
     setShowVerifiedBadge(
       profile.showVerifiedBadge ||
         parseVisibilityFlag(
@@ -164,13 +176,10 @@ const SettingsScreen = () => {
 
     try {
       const res = await Api.getProfile();
-      console.log('res', res?.data);
       if (res?.status == 200) {
         const saved = saveProfileCache(res?.data);
         applyProfile(saved);
-        setMembershipBadge(
-          pickMembershipBadge(res?.data) || pickMembershipBadge(saved),
-        );
+        setMembershipBadge(pickMembershipBadge(res?.data));
       } else if (!cachedProfile) {
         Toast.show(res?.data?.message || 'Failed to load profile', Toast.LONG);
       }

@@ -609,6 +609,35 @@ export const Api = {
       toPaymentScreenshotFormData(userSubscriptionId, screenshot),
     ),
 
+  upgradeSubscription: (payload: {
+    payment_method: string;
+    subscription_id?: string;
+  }) =>
+    apiClient.postForm<{
+      success?: boolean | number;
+      message?: string;
+      next_billing_date?: string;
+      renews_at?: string;
+      expires_at?: string;
+      subscription?: { id?: number | string };
+      data?: {
+        next_billing_date?: string;
+        renews_at?: string;
+        expires_at?: string;
+        subscription?: { id?: number | string };
+      };
+    }>(ENDPOINTS.SUBSCRIPTIONS_UPGRADE, {
+      payment_method: payload.payment_method,
+      ...(payload.subscription_id
+        ? { subscription_id: payload.subscription_id }
+        : {}),
+    }),
+
+  cancelSubscription: () =>
+    apiClient.postEmpty<{ success?: boolean | number; message?: string }>(
+      ENDPOINTS.SUBSCRIPTIONS_CANCEL,
+    ),
+
   updateAccountStatus: async (
     action: 'deactivate' | 'activate',
     credentials?: { email: string; password: string },

@@ -52,6 +52,8 @@ export const ENDPOINTS = {
   SUBSCRIPTIONS_CURRENT: '/subscriptions/current',
   SUBSCRIPTIONS_SUBSCRIBE: '/subscriptions/subscribe',
   SUBSCRIPTIONS_UPLOAD_PAYMENT: '/subscriptions/upload-payment',
+  SUBSCRIPTIONS_UPGRADE: '/subscriptions/upgrade',
+  SUBSCRIPTIONS_CANCEL: '/subscriptions/cancel',
   ACCOUNT_DEACTIVATE: '/account/deactivate',
   ACCOUNT_DELETE: '/account/delete',
 } as const;

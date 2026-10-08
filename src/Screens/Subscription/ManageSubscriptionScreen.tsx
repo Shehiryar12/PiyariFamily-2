@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-simple-toast';
+import ConfirmModal from '../../Components/ConfirmModal';
 import ScreenHeader from '../../Components/ScreenHeader';
 import { AuthStyles } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
@@ -23,6 +24,7 @@ import {
   isApiSuccess,
   mapCurrentSubscription,
   mapSubscriptions,
+  type SubscriptionCurrentPlan,
   type SubscriptionPlanData,
 } from '../../API';
 import { Strings } from '../../Constant/Strings';
@@ -42,6 +44,7 @@ type ManageItemProps = {
   iconColor: string;
   title: string;
   subtitle?: string;
+  loading?: boolean;
   onPress?: () => void;
 };
 
@@ -51,11 +54,13 @@ const ManageItem = ({
   iconColor,
   title,
   subtitle,
+  loading,
   onPress,
 }: ManageItemProps) => (
   <TouchableOpacity
     style={styles.optionCard}
     activeOpacity={0.85}
+    disabled={loading}
     onPress={onPress}
   >
     <View style={[styles.manageIconWrap, { backgroundColor: iconBg }]}>
@@ -66,7 +71,11 @@ const ManageItem = ({
       {subtitle ? <Text style={styles.manageSubtitle}>{subtitle}</Text> : null}
     </View>
     <View style={styles.chevronWrap}>
-      <Icon name="chevron-right" size={fs(18)} color={Colors.primary} />
+      {loading ? (
+        <ActivityIndicator size="small" color={Colors.primary} />
+      ) : (
+        <Icon name="chevron-right" size={fs(18)} color={Colors.primary} />
+      )}
     </View>
   </TouchableOpacity>
 );
@@ -80,7 +89,11 @@ const ManageSubscriptionScreen = () => {
   const [currentTitle, setCurrentTitle] = useState('');
   const [currentMeta, setCurrentMeta] = useState('');
   const [isPaid, setIsPaid] = useState(false);
+  const [currentTier, setCurrentTier] =
+    useState<SubscriptionCurrentPlan['tier']>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchSubscriptions = useCallback(async () => {
     setLoading(true);
@@ -95,6 +108,7 @@ const ManageSubscriptionScreen = () => {
         if (isApiSuccess(currentRes?.status, currentRes?.data?.success)) {
           const current = mapCurrentSubscription(currentRes?.data);
           setIsPaid(current.isPaid);
+          setCurrentTier(current.tier);
           setCurrentTitle(
             current.title
               ? `${current.title}${current.isPaid ? ` — ${Strings.activeStatus}` : ''}`
@@ -148,8 +162,61 @@ const ManageSubscriptionScreen = () => {
     }, [fetchSubscriptions]),
   );
 
+  const handleUpgrade = () => {
+    if (currentTier === 'VVIP') {
+      Toast.show('You are already on the highest plan', Toast.LONG);
+      return;
+    }
+
+    const params = upgradePlan
+      ? toCompletePaymentParams(upgradePlan, { isUpgrade: isPaid })
+      : null;
+
+    if (!params) {
+      Toast.show('Please select an available plan', Toast.LONG);
+      return;
+    }
+
+    navigation.navigate('CompletePayment', params);
+  };
+
+  const handleCancelSubscription = async () => {
+    if (cancelling) {
+      return;
+    }
+
+    setCancelling(true);
+
+    try {
+      const res = await Api.cancelSubscription();
+
+      if (isApiSuccess(res.status, res.data?.success)) {
+        setCancelOpen(false);
+        Toast.show(
+          res.data?.message ?? 'Subscription cancelled',
+          Toast.LONG,
+        );
+        fetchSubscriptions();
+        return;
+      }
+
+      Toast.show(
+        res.data?.message ?? 'Failed to cancel subscription',
+        Toast.LONG,
+      );
+    } catch (error) {
+      Toast.show(
+        getApiErrorMessage(error, 'Failed to cancel subscription'),
+        Toast.LONG,
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
+    <View style={styles.root}>
+    <SafeAreaView style={styles.flex} edges={['top', 'left', 'right']}>
       <LinearGradient
         colors={['#FFE5EC', Colors.background]}
         style={styles.topGlow}
@@ -205,19 +272,12 @@ const ManageSubscriptionScreen = () => {
           iconBg="#FFF8E7"
           iconColor={Colors.gold}
           title={Strings.upgradeToPlatinum}
-          subtitle={Strings.upgradeToPlatinumSubtitle}
-          onPress={() => {
-            const params = upgradePlan
-              ? toCompletePaymentParams(upgradePlan)
-              : null;
-
-            if (!params) {
-              Toast.show('Please select an available plan', Toast.LONG);
-              return;
-            }
-
-            navigation.navigate('CompletePayment', params);
-          }}
+          subtitle={
+            upgradePlan?.priceLabel
+              ? `${upgradePlan.priceLabel} · More features`
+              : Strings.upgradeToPlatinumSubtitle
+          }
+          onPress={handleUpgrade}
         />
 
         <ManageItem
@@ -233,6 +293,10 @@ const ManageSubscriptionScreen = () => {
           iconBg={Colors.tabActiveBg}
           iconColor="#E8889A"
           title={Strings.cancelSubscription}
+          subtitle={Strings.cancelSubscriptionSubtitle}
+          onPress={() => {
+            setCancelOpen(true);
+          }}
         />
 
         <View style={styles.supportInfoBox}>
@@ -250,11 +314,29 @@ const ManageSubscriptionScreen = () => {
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
+
+      <ConfirmModal
+        visible={cancelOpen}
+        title={Strings.cancelSubscriptionConfirmTitle}
+        message={Strings.cancelSubscriptionConfirmMessage}
+        cancelLabel={Strings.no}
+        confirmLabel={Strings.yes}
+        loading={cancelling}
+        iconName="close-circle-outline"
+        onClose={() => {
+          if (!cancelling) {
+            setCancelOpen(false);
+          }
+        }}
+        onConfirm={handleCancelSubscription}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
+  flex: { flex: 1 },
   topGlow: {
     position: 'absolute',
     top: 0,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -34,46 +34,65 @@ const ConfirmModal = ({
   iconName = 'logout',
   onClose,
   onConfirm,
-}: Props) => (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="fade"
-    onRequestClose={onClose}
-  >
-    <View style={styles.backdrop}>
-      <Pressable style={styles.backdropPress} onPress={onClose} />
-      <View style={styles.dialog}>
-        <View style={styles.iconWrap}>
-          <Icon name={iconName} size={fs(18)} color={Colors.white} />
-        </View>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.message}>{message}</Text>
+}: Props) => {
+  const [allowBackdropClose, setAllowBackdropClose] = useState(false);
 
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.cancelBtn]}
-            activeOpacity={0.85}
-            disabled={loading}
-            onPress={onClose}
-          >
-            <Text style={styles.cancelText}>{cancelLabel}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.confirmBtn]}
-            activeOpacity={0.85}
-            disabled={loading}
-            onPress={onConfirm}
-          >
-            <Text style={styles.confirmText}>
-              {loading ? '...' : confirmLabel}
-            </Text>
-          </TouchableOpacity>
+  useEffect(() => {
+    if (!visible) {
+      setAllowBackdropClose(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setAllowBackdropClose(true), 400);
+    return () => clearTimeout(timer);
+  }, [visible]);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      presentationStyle="overFullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.backdrop} pointerEvents="box-none">
+        <Pressable
+          style={styles.backdropPress}
+          onPress={allowBackdropClose && !loading ? onClose : undefined}
+        />
+        <View style={styles.dialog} pointerEvents="auto">
+          <View style={styles.iconWrap}>
+            <Icon name={iconName} size={fs(18)} color={Colors.white} />
+          </View>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.message}>{message}</Text>
+
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.cancelBtn]}
+              activeOpacity={0.85}
+              disabled={loading}
+              onPress={onClose}
+            >
+              <Text style={styles.cancelText}>{cancelLabel}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.confirmBtn]}
+              activeOpacity={0.85}
+              disabled={loading}
+              onPress={onConfirm}
+            >
+              <Text style={styles.confirmText}>
+                {loading ? '...' : confirmLabel}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -94,6 +113,8 @@ const styles = StyleSheet.create({
     paddingBottom: hp('1.8%'),
     alignItems: 'center',
     width: '100%',
+    zIndex: 2,
+    elevation: 8,
   },
   iconWrap: {
     width: wp('10%'),
