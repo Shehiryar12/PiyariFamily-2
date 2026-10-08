@@ -32,7 +32,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { PREMIUM_PERKS } from '../../Constant/Subscription';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
-import { getFooterBottomPadding } from '../../Functions/safeArea';
+import { getHiddenTabFooterPadding } from '../../Functions/safeArea';
 import { useHideTabBar } from '../../Functions/useHideTabBar';
 import { popStackOrGoHome } from '../../Functions/tabNavigation';
 import { fs, hp, wp } from '../../Functions/responsive';
@@ -300,7 +300,7 @@ const ChooseYourPlanScreen = () => {
       <View
         style={[
           styles.footer,
-          { paddingBottom: getFooterBottomPadding(insets.bottom) },
+          { paddingBottom: getHiddenTabFooterPadding(insets.bottom) },
         ]}
       >
         <PrimaryButton
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: AuthStyles.horizontalPadding,
-    paddingTop: hp('1.2%'),
+    paddingTop: hp('1%'),
     borderTopWidth: 1,
     borderTopColor: Colors.divider,
     backgroundColor: Colors.background,
