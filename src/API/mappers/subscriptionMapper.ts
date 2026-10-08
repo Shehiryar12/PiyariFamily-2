@@ -1055,3 +1055,172 @@ export const mapCurrentSubscription = (
     apiId: pickString(current.id),
   };
 };
+
+export type SubscribePaymentSummary = {
+  discountPercent: number;
+  amountPaidLabel: string;
+  originalPriceLabel: string;
+  hasDiscount: boolean;
+};
+
+const toMoneyNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.replace(/,/g, '').replace(/[^\d.]/g, ''));
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return parsed;
+    }
+  }
+
+  return 0;
+};
+
+const collectPaymentSources = (
+  response?: Record<string, any> | null,
+): Record<string, any>[] => {
+  const sources: Record<string, any>[] = [];
+  const add = (value: unknown) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      sources.push(value as Record<string, any>);
+    }
+  };
+
+  const nested =
+    response?.data && typeof response.data === 'object' ? response.data : null;
+  const subscription = response?.subscription ?? nested?.subscription;
+  const plan = subscription?.plan ?? nested?.plan ?? response?.plan;
+
+  add(subscription?.pricing);
+  add(nested?.pricing);
+  add(response?.pricing);
+  add(subscription);
+  add(nested);
+  add(response);
+  add(plan);
+
+  return sources;
+};
+
+const pickFromSources = (sources: Record<string, any>[], keys: string[]) => {
+  for (const source of sources) {
+    for (const key of keys) {
+      const value = source[key];
+      if (value !== undefined && value !== null && value !== '') {
+        return value;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+export const mapSubscribePayment = (
+  response?: Record<string, any> | null,
+  fallbackPrice = 0,
+  fallbackPriceLabel = '',
+): SubscribePaymentSummary => {
+  const nested =
+    response?.data && typeof response.data === 'object' ? response.data : null;
+  const subscription = response?.subscription ?? nested?.subscription;
+  const pricing =
+    subscription?.pricing ?? nested?.pricing ?? response?.pricing ?? null;
+  const sources = collectPaymentSources(response);
+  const originalPrice =
+    toMoneyNumber(
+      pricing?.original_price ??
+        pickFromSources(sources, ['original_price', 'original_amount', 'plan_price']),
+    ) || fallbackPrice;
+
+  let amountPaid = toMoneyNumber(
+    pricing?.payable_price ??
+      pickFromSources(sources, [
+        'payable_price',
+        'final_price',
+        'amount_paid',
+        'paid_amount',
+        'final_amount',
+        'charged_amount',
+        'payable_amount',
+        'net_amount',
+      ]),
+  );
+
+  let discountPercent = toMoneyNumber(
+    pricing?.discount_percent ??
+      pickFromSources(sources, ['discount_percent', 'discount_percentage']),
+  );
+  const discountAmount = toMoneyNumber(
+    pickFromSources(sources, ['discount_amount']),
+  );
+  const discountApplied = isTruthyFlag(
+    pricing?.discount_applied ??
+      pickFromSources(sources, [
+        'discount_applied',
+        'has_discount',
+        'is_discounted',
+      ]),
+  );
+
+  if (discountPercent > 100) {
+    discountPercent = 0;
+  }
+
+  if (
+    !discountPercent &&
+    originalPrice > 0 &&
+    (amountPaid > 0 || discountAmount > 0)
+  ) {
+    const paid = amountPaid || originalPrice - discountAmount;
+    if (paid < originalPrice) {
+      discountPercent = Math.round(((originalPrice - paid) / originalPrice) * 100);
+    }
+  }
+
+  if (!discountPercent && discountApplied) {
+    discountPercent = 50;
+  }
+
+  if (discountPercent > 0 && !amountPaid && originalPrice > 0) {
+    amountPaid = originalPrice * (1 - discountPercent / 100);
+  }
+
+  if (!amountPaid) {
+    amountPaid = originalPrice;
+  }
+
+  const hasDiscount =
+    discountApplied ||
+    discountPercent > 0 ||
+    discountAmount > 0 ||
+    (originalPrice > 0 && amountPaid > 0 && amountPaid < originalPrice);
+
+  return {
+    discountPercent: hasDiscount ? Math.round(discountPercent || 50) : 0,
+    amountPaidLabel: formatPriceLabel(amountPaid) || fallbackPriceLabel,
+    originalPriceLabel:
+      pickString(pickFromSources(sources, ['original_price_label'])) ||
+      formatPriceLabel(originalPrice) ||
+      fallbackPriceLabel,
+    hasDiscount,
+  };
+};
+
+export const pickUserSubscriptionId = (
+  response?: Record<string, any> | null,
+) => {
+  const nested =
+    response?.data && typeof response.data === 'object' && !Array.isArray(response.data)
+      ? response.data
+      : null;
+  const subscription = response?.subscription ?? nested?.subscription;
+
+  return pickString(
+    subscription?.id,
+    response?.user_subscription_id,
+    nested?.user_subscription_id,
+    response?.id,
+  );
+};

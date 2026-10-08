@@ -26,9 +26,12 @@ export {
   mapSubscriptions,
   mapPlanFeatures,
   mapCurrentSubscription,
+  mapSubscribePayment,
+  pickUserSubscriptionId,
 } from './mappers/subscriptionMapper';
 export type {
   CurrentSubscriptionResponse,
+  SubscribePaymentSummary,
   SubscriptionApiPlan,
   SubscriptionCompareRow,
   SubscriptionCurrentPlan,

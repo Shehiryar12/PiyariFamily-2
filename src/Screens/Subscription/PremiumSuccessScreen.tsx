@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
   ImageSourcePropType,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,8 +18,24 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { launchImageLibrary } from 'react-native-image-picker';
+import Toast from 'react-native-simple-toast';
 import { Images } from '../../Assets';
 import PrimaryButton from '../../Components/PrimaryButton';
+import {
+  Api,
+  getApiErrorMessage,
+  isApiSuccess,
+} from '../../API';
+import {
+  normalizeUploadFile,
+  type UploadFile,
+} from '../../API/formData';
+import {
+  PROFILE_PHOTO_MAX_BYTES,
+  PROFILE_PHOTO_PICKER_MAX_SIZE,
+  PROFILE_PHOTO_PICKER_QUALITY,
+} from '../../Constant/ProfileSetup';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
@@ -65,10 +83,128 @@ const PremiumSuccessScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
   const insets = useSafeAreaInsets();
-  const { plan, priceLabel, nextBilling } = route.params;
+  const {
+    plan,
+    priceLabel,
+    nextBilling,
+    discountPercent,
+    amountPaidLabel,
+    originalPriceLabel,
+    userSubscriptionId,
+  } = route.params;
   useHideTabBar();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [screenshot, setScreenshot] = useState<UploadFile | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploaded, setUploaded] = useState(false);
 
   const planLabel = plan === 'VIP' ? Strings.vipPlan : Strings.vvipPlan;
+  const paidLabel = amountPaidLabel || priceLabel;
+  const listPriceLabel = originalPriceLabel || priceLabel;
+  const hasDiscount = Boolean(discountPercent && discountPercent > 0);
+
+  const handleExplore = () => {
+    if (!uploaded) {
+      Toast.show(Strings.screenshotRequired, Toast.LONG);
+      setUploadOpen(true);
+      return;
+    }
+
+    navigateToHomeTab(navigation);
+  };
+
+  const handlePickScreenshot = () => {
+    if (uploading) {
+      return;
+    }
+
+    setUploadOpen(false);
+
+    setTimeout(() => {
+      launchImageLibrary(
+        {
+          mediaType: 'photo',
+          selectionLimit: 1,
+          includeBase64: false,
+          maxWidth: PROFILE_PHOTO_PICKER_MAX_SIZE,
+          maxHeight: PROFILE_PHOTO_PICKER_MAX_SIZE,
+          quality: PROFILE_PHOTO_PICKER_QUALITY,
+        },
+        response => {
+          setUploadOpen(true);
+
+          if (
+            response.didCancel ||
+            response.errorCode ||
+            !response.assets?.[0]?.uri
+          ) {
+            return;
+          }
+
+          const asset = response.assets[0];
+          if (asset.fileSize && asset.fileSize > PROFILE_PHOTO_MAX_BYTES) {
+            Toast.show(Strings.photoTooLarge, Toast.LONG);
+            return;
+          }
+
+          setScreenshot(
+            normalizeUploadFile(
+              asset.uri as string,
+              asset.fileName ?? 'payment-screenshot.jpg',
+              asset.type,
+            ),
+          );
+        },
+      );
+    }, 400);
+  };
+
+  const handleSubmitScreenshot = async () => {
+    if (uploading) {
+      return;
+    }
+
+    if (!userSubscriptionId) {
+      Toast.show('Subscription id missing. Please try again.', Toast.LONG);
+      return;
+    }
+
+    if (!screenshot) {
+      Toast.show(Strings.screenshotRequired, Toast.LONG);
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const res = await Api.uploadPaymentScreenshot(
+        userSubscriptionId,
+        screenshot,
+      );
+
+      if (isApiSuccess(res.status, res.data?.success)) {
+        setUploaded(true);
+        setUploadOpen(false);
+        Toast.show(
+          res.data?.message ?? Strings.screenshotUploaded,
+          Toast.LONG,
+        );
+        return;
+      }
+
+      Toast.show(
+        res.data?.message ?? 'Failed to upload payment screenshot',
+        Toast.LONG,
+      );
+    } catch (error) {
+      Toast.show(
+        getApiErrorMessage(error, 'Failed to upload payment screenshot'),
+        Toast.LONG,
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const renderPerkIcon = (perk: SuccessPerk) => {
     if (perk.iconSource) {
@@ -100,7 +236,7 @@ const PremiumSuccessScreen = () => {
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <ScrollView
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.heroWrap}>
@@ -146,14 +282,40 @@ const PremiumSuccessScreen = () => {
                 {Strings.subscriptionActive}
               </Text>
               <Text style={styles.planDetail}>
-                {planLabel} · {priceLabel}
-                {Strings.perMonth}
+                {planLabel} · {listPriceLabel}
               </Text>
               {nextBilling ? (
                 <Text style={styles.billingText}>
                   {Strings.nextBillingDate.replace('{date}', nextBilling)}
                 </Text>
               ) : null}
+            </View>
+          </View>
+
+          <View style={styles.paymentCard}>
+            <Text style={styles.paymentTitle}>{Strings.paymentSummary}</Text>
+            {hasDiscount ? (
+              <View style={styles.discountBanner}>
+                <Icon name="tag-outline" size={fs(16)} color={Colors.gold} />
+                <Text style={styles.discountBannerText}>
+                  {Strings.youGotDiscount.replace(
+                    '{percent}',
+                    String(discountPercent),
+                  )}
+                </Text>
+              </View>
+            ) : null}
+            {hasDiscount ? (
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>{Strings.originalPrice}</Text>
+                <Text style={styles.originalPriceText}>{listPriceLabel}</Text>
+              </View>
+            ) : null}
+            <View style={styles.paymentRow}>
+              <Text style={styles.paymentLabel}>
+                {hasDiscount ? Strings.youPaid : Strings.amountDeducted}
+              </Text>
+              <Text style={styles.paidAmountText}>{paidLabel}</Text>
             </View>
           </View>
 
@@ -177,20 +339,112 @@ const PremiumSuccessScreen = () => {
             { paddingBottom: getFooterBottomPadding(insets.bottom) },
           ]}
         >
-          <PrimaryButton
-            title={Strings.startExploringMatches}
-            onPress={() => navigateToHomeTab(navigation)}
-            showArrow
-          />
-          <TouchableOpacity
-            style={styles.manageLinkWrap}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('ManageSubscription')}
-          >
-            <Text style={styles.manageLink}>{Strings.manageSubscription}</Text>
-          </TouchableOpacity>
+          {uploaded ? (
+            <>
+              <PrimaryButton
+                title={Strings.startExploringMatches}
+                onPress={handleExplore}
+                showArrow
+              />
+              <TouchableOpacity
+                style={styles.manageLinkWrap}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('ManageSubscription')}
+              >
+                <Text style={styles.manageLink}>{Strings.manageSubscription}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <PrimaryButton
+              title={Strings.uploadPaymentScreenshot}
+              onPress={() => setUploadOpen(true)}
+              leftIcon="image-plus"
+            />
+          )}
         </View>
       </SafeAreaView>
+
+      <Modal
+        visible={uploadOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        presentationStyle="overFullScreen"
+        onRequestClose={() => !uploading && setUploadOpen(false)}
+      >
+        <View
+          style={[
+            styles.modalBackdrop,
+            {
+              paddingTop: insets.top + hp('2%'),
+              paddingBottom: insets.bottom + hp('2%'),
+            },
+          ]}
+        >
+          <Pressable
+            style={styles.modalDismiss}
+            onPress={() => !uploading && setUploadOpen(false)}
+          />
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle} numberOfLines={1}>
+                {Strings.uploadPaymentTitle}
+              </Text>
+              <TouchableOpacity
+                onPress={() => !uploading && setUploadOpen(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={uploading}
+              >
+                <Icon name="close" size={fs(22)} color={Colors.iconMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalHint}>{Strings.uploadPaymentHint}</Text>
+
+            <TouchableOpacity
+              style={styles.screenshotBox}
+              activeOpacity={0.85}
+              onPress={handlePickScreenshot}
+              disabled={uploading}
+            >
+              {screenshot?.uri ? (
+                <Image
+                  source={{ uri: screenshot.uri }}
+                  style={styles.screenshotPreview}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.screenshotEmpty}>
+                  <Icon name="camera-plus" size={fs(28)} color={Colors.gold} />
+                  <Text style={styles.screenshotPlaceholder}>
+                    {Strings.selectScreenshot}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {screenshot?.uri ? (
+              <TouchableOpacity
+                style={styles.changeShotWrap}
+                onPress={handlePickScreenshot}
+                disabled={uploading}
+              >
+                <Text style={styles.changeShotText}>
+                  {Strings.changeScreenshot}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.changeShotSpacer} />
+            )}
+
+            <PrimaryButton
+              title={Strings.submitScreenshot}
+              onPress={handleSubmitScreenshot}
+              loading={uploading}
+              disabled={!screenshot}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -289,8 +543,63 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.focusBorder,
     padding: wp('4%'),
-    marginBottom: hp('2%'),
+    marginBottom: hp('1.2%'),
     gap: wp('3.5%'),
+  },
+  paymentCard: {
+    width: '100%',
+    backgroundColor: Colors.tabActiveBg,
+    borderRadius: wp('4%'),
+    borderWidth: 1,
+    borderColor: Colors.focusBorder,
+    padding: wp('4%'),
+    marginBottom: hp('2%'),
+  },
+  paymentTitle: {
+    fontSize: fs(14),
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    marginBottom: hp('1%'),
+  },
+  discountBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp('2%'),
+    backgroundColor: '#FFF8E7',
+    borderWidth: 1,
+    borderColor: Colors.goldLight,
+    borderRadius: wp('3%'),
+    paddingHorizontal: wp('3%'),
+    paddingVertical: hp('0.9%'),
+    marginBottom: hp('1.1%'),
+  },
+  discountBannerText: {
+    flex: 1,
+    fontSize: fs(13),
+    fontFamily: Fonts.semiBold,
+    color: Colors.gold,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: hp('0.6%'),
+  },
+  paymentLabel: {
+    fontSize: fs(12),
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+  },
+  originalPriceText: {
+    fontSize: fs(12),
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+    textDecorationLine: 'line-through',
+  },
+  paidAmountText: {
+    fontSize: fs(14),
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
   },
   activeCheckWrap: {
     width: wp('11%'),
@@ -365,6 +674,83 @@ const styles = StyleSheet.create({
     marginTop: hp('1.2%'),
   },
   manageLink: {
+    fontSize: fs(13),
+    fontFamily: Fonts.semiBold,
+    color: Colors.gold,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: wp('6%'),
+  },
+  modalDismiss: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalCard: {
+    alignSelf: 'stretch',
+    backgroundColor: Colors.white,
+    borderRadius: wp('4%'),
+    paddingHorizontal: wp('4.5%'),
+    paddingTop: hp('2%'),
+    paddingBottom: hp('2%'),
+    zIndex: 2,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: hp('0.8%'),
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: fs(16),
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    marginRight: wp('2%'),
+  },
+  modalHint: {
+    fontSize: fs(12),
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+    lineHeight: fs(18),
+    marginBottom: hp('1.6%'),
+  },
+  screenshotBox: {
+    width: '100%',
+    height: hp('24%'),
+    maxHeight: 220,
+    borderRadius: wp('3.5%'),
+    borderWidth: 1.5,
+    borderColor: Colors.focusBorder,
+    backgroundColor: Colors.tabActiveBg,
+    overflow: 'hidden',
+    marginBottom: hp('1%'),
+  },
+  screenshotEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  screenshotPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  screenshotPlaceholder: {
+    marginTop: hp('0.8%'),
+    fontSize: fs(13),
+    fontFamily: Fonts.semiBold,
+    color: Colors.primary,
+  },
+  changeShotWrap: {
+    alignItems: 'center',
+    marginBottom: hp('1.4%'),
+  },
+  changeShotSpacer: {
+    height: hp('1.4%'),
+  },
+  changeShotText: {
     fontSize: fs(13),
     fontFamily: Fonts.semiBold,
     color: Colors.gold,

@@ -73,6 +73,10 @@ export type ProfileStackParamList = {
     plan: 'VIP' | 'VVIP';
     priceLabel: string;
     nextBilling?: string;
+    discountPercent?: number;
+    amountPaidLabel?: string;
+    originalPriceLabel?: string;
+    userSubscriptionId?: string;
   };
   ManageSubscription: undefined;
 };

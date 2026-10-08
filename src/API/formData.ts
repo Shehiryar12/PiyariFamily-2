@@ -293,3 +293,16 @@ export const toSetupPhotosFormData = async (
   formData.append('main_index', String(mainIndex));
   return formData;
 };
+
+export const toPaymentScreenshotFormData = (
+  userSubscriptionId: string,
+  screenshot: UploadFile,
+) => {
+  const formData = new FormData();
+  formData.append('user_subscription_id', userSubscriptionId);
+  formData.append(
+    'payment_screenshot',
+    toNativeFilePart(screenshot) as unknown as Blob,
+  );
+  return formData;
+};

@@ -23,6 +23,8 @@ import {
   Api,
   getApiErrorMessage,
   isApiSuccess,
+  mapSubscribePayment,
+  pickUserSubscriptionId,
 } from '../../API';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
@@ -107,7 +109,7 @@ const PAYMENT_METHODS: MethodConfig[] = [
 const CompletePaymentScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
-  const { plan, priceLabel, subscriptionId } = route.params;
+  const { plan, price, priceLabel, subscriptionId } = route.params;
   const insets = useSafeAreaInsets();
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [cardExpanded, setCardExpanded] = useState(true);
@@ -167,10 +169,11 @@ const CompletePaymentScreen = () => {
         cvv: cvvCode,
       });
       if (isApiSuccess(res.status, res.data?.success) && res.data?.success !== false) {
+        const payment = mapSubscribePayment(res.data, price, priceLabel);
         Toast.show(res.data?.message ?? 'Payment successful', Toast.LONG);
         navigation.navigate('PremiumSuccess', {
           plan,
-          priceLabel,
+          priceLabel: payment.originalPriceLabel || priceLabel,
           nextBilling:
             res.data?.next_billing_date ??
             res.data?.renews_at ??
@@ -178,6 +181,10 @@ const CompletePaymentScreen = () => {
             res.data?.data?.next_billing_date ??
             res.data?.data?.renews_at ??
             res.data?.data?.expires_at,
+          discountPercent: payment.discountPercent,
+          amountPaidLabel: payment.amountPaidLabel,
+          originalPriceLabel: payment.originalPriceLabel,
+          userSubscriptionId: pickUserSubscriptionId(res.data),
         });
         return;
       }
@@ -237,7 +244,7 @@ const CompletePaymentScreen = () => {
       >
         <ScrollView
           style={styles.flex}
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"

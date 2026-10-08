@@ -2,6 +2,7 @@ import { AxiosError, AxiosRequestConfig } from 'axios';
 import { apiClient } from './apiClient';
 import { ENDPOINTS } from './endpoints';
 import {
+  toPaymentScreenshotFormData,
   toProfileUpdateFormData,
   toSetupPhotosFormData,
   type FormValue,
@@ -538,11 +539,47 @@ export const Api = {
       renews_at?: string;
       expires_at?: string;
       expiry_date?: string;
+      discount?: number | string;
+      discount_percent?: number | string;
+      discount_percentage?: number | string;
+      discount_amount?: number | string;
+      has_discount?: boolean | number | string;
+      discount_applied?: boolean | number | string;
+      is_discounted?: boolean | number | string;
+      original_price?: number | string;
+      original_price_label?: string;
+      original_amount?: number | string;
+      price_label?: string;
+      amount_paid?: number | string;
+      paid_amount?: number | string;
+      final_price?: number | string;
+      final_amount?: number | string;
+      charged_amount?: number | string;
+      payable_amount?: number | string;
+      net_amount?: number | string;
       data?: {
         next_billing_date?: string;
         renews_at?: string;
         expires_at?: string;
         expiry_date?: string;
+        discount?: number | string;
+        discount_percent?: number | string;
+        discount_percentage?: number | string;
+        discount_amount?: number | string;
+        has_discount?: boolean | number | string;
+        discount_applied?: boolean | number | string;
+        is_discounted?: boolean | number | string;
+        original_price?: number | string;
+        original_price_label?: string;
+        original_amount?: number | string;
+        price_label?: string;
+        amount_paid?: number | string;
+        paid_amount?: number | string;
+        final_price?: number | string;
+        final_amount?: number | string;
+        charged_amount?: number | string;
+        payable_amount?: number | string;
+        net_amount?: number | string;
       };
     };
 
@@ -562,6 +599,15 @@ export const Api = {
       throw error;
     }
   },
+
+  uploadPaymentScreenshot: (
+    userSubscriptionId: string,
+    screenshot: UploadFile,
+  ) =>
+    apiClient.postFormData<{ success?: boolean | number; message?: string }>(
+      ENDPOINTS.SUBSCRIPTIONS_UPLOAD_PAYMENT,
+      toPaymentScreenshotFormData(userSubscriptionId, screenshot),
+    ),
 
   updateAccountStatus: async (
     action: 'deactivate' | 'activate',
