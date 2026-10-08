@@ -65,6 +65,9 @@ export type HomeMatchesData = {
   totalMatches: number;
   featuredMatches: FeaturedMatch[];
   suggestedMatches: SuggestedMatch[];
+  membershipBadge: string | null;
+  membershipBadges: string[];
+  hasPaidPackage: boolean;
 };
 
 export type MatchApiItem = {
@@ -136,6 +139,9 @@ export type MatchApiItem = {
   residential_status?: string | null;
   residence_status?: string | null;
   interests?: string[] | null;
+  membership_badge?: string | null;
+  membershipBadge?: string | null;
+  badges?: string[] | null;
   is_like?: boolean | number | string | null;
   is_liked?: boolean | number | string | null;
   liked?: boolean | number | string | null;
@@ -151,6 +157,19 @@ export type MatchProfileResponse = MatchApiItem & {
 export type HomeMatchesResponse = {
   success?: boolean;
   greeting?: string | null;
+  membership_badge?: string | null;
+  membershipBadge?: string | null;
+  badges?: string[] | null;
+  user?: MatchApiItem | null;
+  me?: MatchApiItem | null;
+  current_user?: MatchApiItem | null;
+  viewer?: MatchApiItem | null;
+  is_premium?: boolean | number | string | null;
+  has_subscription?: boolean | number | string | null;
+  is_paid?: boolean | number | string | null;
+  current_plan?: unknown;
+  subscription?: unknown;
+  membership?: unknown;
   top_match?: MatchApiItem | null;
   featured_matches?: MatchApiItem[];
   featured?: MatchApiItem[];
@@ -1298,6 +1317,88 @@ const collectHomeMatchItems = (response: HomeMatchesResponse) => {
   return items;
 };
 
+const pickHomeViewer = (data: HomeMatchesResponse): MatchApiItem | null => {
+  const candidates = [data.user, data.me, data.current_user, data.viewer];
+  return candidates.find(item => item && typeof item === 'object') ?? null;
+};
+
+const FREE_MEMBERSHIP_KEYS = new Set(['', 'free', 'none', 'null']);
+const PAID_BADGE_HINTS = ['vip', 'vvip', 'premium', 'platinum', 'gold', 'paid'];
+
+const isPaidMembershipBadge = (value?: string | null) => {
+  const key = String(value ?? '')
+    .trim()
+    .toLowerCase();
+  return Boolean(key) && !FREE_MEMBERSHIP_KEYS.has(key);
+};
+
+const isPaidFlag = (value: unknown) =>
+  value === true || value === 1 || value === '1' || value === 'true';
+
+const planLooksPaid = (value: unknown) => {
+  if (typeof value === 'string') {
+    return isPaidMembershipBadge(value);
+  }
+
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const plan = value as Record<string, unknown>;
+  return (
+    isPaidMembershipBadge(
+      pickString(
+        typeof plan.type === 'string' ? plan.type : null,
+        typeof plan.name === 'string' ? plan.name : null,
+        typeof plan.plan === 'string' ? plan.plan : null,
+        typeof plan.title === 'string' ? plan.title : null,
+        typeof plan.membership_badge === 'string' ? plan.membership_badge : null,
+      ),
+    ) ||
+    isPaidFlag(plan.is_paid) ||
+    isPaidFlag(plan.is_premium)
+  );
+};
+
+const pickHomeMembership = (data: HomeMatchesResponse) => {
+  const viewer = pickHomeViewer(data);
+  const extra = data as HomeMatchesResponse & Record<string, unknown>;
+  const viewerExtra = viewer as (MatchApiItem & Record<string, unknown>) | null;
+  const membershipBadge =
+    pickString(
+      data.membership_badge,
+      data.membershipBadge,
+      viewer?.membership_badge,
+      viewer?.membershipBadge,
+    ) || null;
+  const rawBadges = data.badges ?? viewer?.badges ?? [];
+  const membershipBadges = Array.isArray(rawBadges)
+    ? rawBadges
+        .map(item => (typeof item === 'string' ? item.trim() : ''))
+        .filter(Boolean)
+    : [];
+  const badgesLookPaid = membershipBadges.some(item =>
+    PAID_BADGE_HINTS.some(hint => item.toLowerCase().includes(hint)),
+  );
+  const hasPaidPackage =
+    isPaidMembershipBadge(membershipBadge) ||
+    badgesLookPaid ||
+    isPaidFlag(extra.is_premium) ||
+    isPaidFlag(extra.has_subscription) ||
+    isPaidFlag(extra.is_paid) ||
+    isPaidFlag(viewerExtra?.is_premium) ||
+    isPaidFlag(viewerExtra?.has_subscription) ||
+    isPaidFlag(viewerExtra?.is_paid) ||
+    planLooksPaid(extra.current_plan) ||
+    planLooksPaid(extra.subscription) ||
+    planLooksPaid(extra.membership) ||
+    planLooksPaid(viewerExtra?.current_plan) ||
+    planLooksPaid(viewerExtra?.subscription) ||
+    planLooksPaid(viewerExtra?.membership);
+
+  return { membershipBadge, membershipBadges, hasPaidPackage };
+};
+
 const splitGreeting = (greeting: string) => {
   const dotIndex = greeting.indexOf('. ');
 
@@ -1336,6 +1437,7 @@ export const mapHomeMatches = (
       featuredItems.length + suggestedItems.length,
     featuredMatches: featuredItems.map(mapFeaturedMatch),
     suggestedMatches: mapSuggestedMatches(suggestedItems),
+    ...pickHomeMembership(data),
   };
 
   console.log('GET /matches/home mapped names:', [

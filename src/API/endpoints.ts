@@ -49,6 +49,8 @@ export const ENDPOINTS = {
   MATCHES_SEARCH: '/matches/search',
   MATCHES: '/matches',
   SUBSCRIPTIONS: '/subscriptions',
+  SUBSCRIPTIONS_CURRENT: '/subscriptions/current',
+  SUBSCRIPTIONS_SUBSCRIBE: '/subscriptions/subscribe',
   ACCOUNT_DEACTIVATE: '/account/deactivate',
   ACCOUNT_DELETE: '/account/delete',
 } as const;

@@ -30,7 +30,10 @@ export type SubscriptionCurrentPlan = {
   priceLabel: string;
   period: string;
   renewsAt: string;
+  expiresAt: string;
   isPaid: boolean;
+  tier: 'VIP' | 'VVIP' | 'Free' | null;
+  apiId: string;
 };
 
 export type SubscriptionPlansData = {
@@ -74,6 +77,7 @@ export type SubscriptionApiPlan = {
   billing_period?: string | null;
   type?: string | null;
   payment_status?: string | null;
+  status?: string | null;
   badge?: string | null;
   tag?: string | null;
   label?: string | null;
@@ -95,7 +99,14 @@ export type SubscriptionApiPlan = {
 
 export type SubscriptionComparisonRow = {
   feature?: string | null;
-  plans?: unknown[];
+  name?: string | null;
+  title?: string | null;
+  label?: string | null;
+  free?: boolean | string | number | null;
+  vip?: boolean | string | number | null;
+  vvip?: boolean | string | number | null;
+  plans?: unknown[] | Record<string, unknown> | null;
+  values?: Record<string, unknown> | null;
 };
 
 export type SubscriptionsResponse = {
@@ -103,6 +114,7 @@ export type SubscriptionsResponse = {
   plans?: SubscriptionApiPlan[];
   subscriptions?: SubscriptionApiPlan[];
   comparison?: SubscriptionComparisonRow[];
+  compare?: SubscriptionComparisonRow[];
   data?:
     | SubscriptionApiPlan[]
     | { plans?: SubscriptionApiPlan[]; comparison?: SubscriptionComparisonRow[] };
@@ -173,14 +185,260 @@ const formatPriceLabel = (price: number, currency = 'PKR') => {
   return `${currency} ${price.toLocaleString('en-PK')}`;
 };
 
+const FEATURE_CANONICAL: Record<string, string> = {
+  search: 'Search',
+  'basic search': 'Search',
+  chat: 'Chats',
+  chats: 'Chats',
+  messaging: 'Chats',
+  messages: 'Chats',
+  boost: 'Profile Boosts',
+  boosts: 'Profile Boosts',
+  'profile boost': 'Profile Boosts',
+  'profile boosts': 'Profile Boosts',
+  'super like': 'Super Likes',
+  'super likes': 'Super Likes',
+  badge: 'Plan Badge',
+  'plan badge': 'Plan Badge',
+  'vip badge': 'Plan Badge',
+  'vvip badge': 'Plan Badge',
+  likes: 'See Who Liked You',
+  'see likes': 'See Who Liked You',
+  'see who liked you': 'See Who Liked You',
+};
+
+const titleCase = (value: string) =>
+  value
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+const normalizeFeatureKey = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\beverything in\b.+$/g, ' ')
+    .replace(/\bunlimited\b/g, ' ')
+    .replace(/\blimited\b/g, ' ')
+    .replace(/\bbasic\b/g, ' ')
+    .replace(/\bper\s+(month|day|week|mo)\b/g, ' ')
+    .replace(/\b(month|mo|day|week)\b/g, ' ')
+    .replace(/\b\d+\b/g, ' ')
+    .replace(/\b(vip|vvip|free)\b/g, ' ')
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const canonicalFeatureLabel = (value: string) => {
+  const key = normalizeFeatureKey(value);
+  if (!key) {
+    return '';
+  }
+
+  return FEATURE_CANONICAL[key] || titleCase(key);
+};
+
+const deriveCellValue = (raw: string): boolean | string => {
+  const text = raw.trim();
+  if (!text || /^everything in\b/i.test(text)) {
+    return true;
+  }
+
+  if (/\bunlimited\b/i.test(text)) {
+    return 'Unlimited';
+  }
+
+  if (/\blimited\b/i.test(text)) {
+    return 'Limited';
+  }
+
+  const per = text.match(/(\d+)\s*(?:\/\s*|\s+per\s+)(month|mo|day|week)/i);
+  if (per) {
+    const unit = per[2].toLowerCase().startsWith('mo')
+      ? 'Month'
+      : titleCase(per[2]);
+    return `${per[1]}/${unit}`;
+  }
+
+  const qtyUnit = text.match(/(\d+).+?\b(month|mo|day|week)\b/i);
+  if (qtyUnit) {
+    const unit = qtyUnit[2].toLowerCase().startsWith('mo')
+      ? 'Month'
+      : titleCase(qtyUnit[2]);
+    return `${qtyUnit[1]}/${unit}`;
+  }
+
+  const canonical = canonicalFeatureLabel(text);
+  if (
+    canonical &&
+    normalizeFeatureKey(text) !== normalizeFeatureKey(canonical)
+  ) {
+    return text;
+  }
+
+  return true;
+};
+
+const coerceCell = (value: unknown): boolean | string => {
+  if (
+    value === true ||
+    value === 1 ||
+    value === '1' ||
+    value === 'true' ||
+    value === 'yes' ||
+    value === 'included'
+  ) {
+    return true;
+  }
+
+  if (
+    value === false ||
+    value === 0 ||
+    value === '0' ||
+    value === 'false' ||
+    value === 'no' ||
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return false;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    return coerceCell(
+      obj.value ?? obj.label ?? obj.text ?? obj.included ?? obj.available,
+    );
+  }
+
+  return false;
+};
+
 const toFeatureList = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
     return [];
   }
 
   return value
-    .map(item => (typeof item === 'string' ? item.trim() : ''))
+    .map(item => {
+      if (typeof item === 'string') {
+        return item.trim();
+      }
+
+      if (item && typeof item === 'object') {
+        return pickString(
+          (item as { title?: string }).title,
+          (item as { name?: string }).name,
+          (item as { feature?: string }).feature,
+          (item as { label?: string }).label,
+          (item as { text?: string }).text,
+        );
+      }
+
+      return '';
+    })
     .filter(Boolean);
+};
+
+type ParsedCompareFeature = {
+  label: string;
+  value: boolean | string;
+};
+
+const parseFeatureItem = (item: unknown): ParsedCompareFeature | null => {
+  if (typeof item === 'string' && item.trim()) {
+    const raw = item.trim();
+    if (/^everything in\b/i.test(raw)) {
+      return null;
+    }
+
+    const label = canonicalFeatureLabel(raw) || raw;
+    return { label, value: deriveCellValue(raw) };
+  }
+
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const obj = item as Record<string, unknown>;
+  const labelRaw = pickString(
+    obj.feature,
+    obj.name,
+    obj.title,
+    obj.label,
+    obj.key,
+    obj.text,
+  );
+  if (!labelRaw || /^everything in\b/i.test(labelRaw)) {
+    return null;
+  }
+
+  const label = canonicalFeatureLabel(labelRaw) || labelRaw;
+  if (obj.included === false || obj.available === false || obj.enabled === false) {
+    return { label, value: false };
+  }
+
+  const explicit = obj.value ?? obj.limit ?? obj.quota ?? obj.amount;
+  if (explicit !== undefined && explicit !== null && explicit !== '') {
+    return { label, value: coerceCell(explicit) };
+  }
+
+  if (typeof obj.included === 'boolean') {
+    return { label, value: obj.included };
+  }
+
+  return { label, value: deriveCellValue(labelRaw) };
+};
+
+const parsePlanCompareFeatures = (
+  plan?: SubscriptionApiPlan | null,
+): ParsedCompareFeature[] => {
+  const raw = plan?.features ?? plan?.benefits;
+  const items: ParsedCompareFeature[] = [];
+
+  const pushItem = (item: unknown) => {
+    const parsed = parseFeatureItem(item);
+    if (parsed) {
+      items.push(parsed);
+    }
+  };
+
+  if (Array.isArray(raw)) {
+    raw.forEach(pushItem);
+    return items;
+  }
+
+  if (raw && typeof raw === 'object') {
+    const bucket = raw.display ?? raw.list ?? raw.items;
+    if (Array.isArray(bucket)) {
+      bucket.forEach(pushItem);
+    }
+
+    Object.entries(raw).forEach(([key, value]) => {
+      if (
+        key === 'display' ||
+        key === 'list' ||
+        key === 'items' ||
+        key === 'comparison'
+      ) {
+        return;
+      }
+
+      const label = canonicalFeatureLabel(key) || titleCase(key.replace(/[_-]+/g, ' '));
+      items.push({ label, value: coerceCell(value) });
+    });
+  }
+
+  return items;
 };
 
 export const mapPlanFeatures = (plan?: SubscriptionApiPlan | null) => {
@@ -302,7 +560,10 @@ const EMPTY_PLANS: SubscriptionPlansData = {
     priceLabel: '',
     period: '',
     renewsAt: '',
+    expiresAt: '',
     isPaid: false,
+    tier: null,
+    apiId: '',
   },
 };
 
@@ -410,40 +671,110 @@ const findPlan = (
       ) === tier,
   );
 
-const buildCompareRows = (
-  freeFeatures: string[],
-  vipFeatures: string[],
-  vvipFeatures: string[],
-  comparison?: SubscriptionComparisonRow[],
+const cellFromList = (
+  features: ParsedCompareFeature[],
+  label: string,
+): boolean | string => features.find(item => item.label === label)?.value ?? false;
+
+const buildRowsFromFeatures = (
+  freeFeatures: ParsedCompareFeature[],
+  vipFeatures: ParsedCompareFeature[],
+  vvipFeatures: ParsedCompareFeature[],
 ): SubscriptionCompareRow[] => {
-  if (Array.isArray(comparison) && comparison.length > 0) {
-    return comparison
-      .map(row => {
-        const label = pickString(row.feature);
-        if (!label) {
-          return null;
-        }
-
-        return {
-          label,
-          free: freeFeatures.includes(label),
-          vip: vipFeatures.includes(label),
-          vvip: vvipFeatures.includes(label),
-        };
-      })
-      .filter((row): row is SubscriptionCompareRow => Boolean(row));
-  }
-
   const labels = Array.from(
-    new Set([...freeFeatures, ...vipFeatures, ...vvipFeatures]),
+    new Set([
+      ...freeFeatures.map(item => item.label),
+      ...vipFeatures.map(item => item.label),
+      ...vvipFeatures.map(item => item.label),
+    ]),
   );
 
   return labels.map(label => ({
     label,
-    free: freeFeatures.includes(label),
-    vip: vipFeatures.includes(label),
-    vvip: vvipFeatures.includes(label),
+    free: cellFromList(freeFeatures, label),
+    vip: cellFromList(vipFeatures, label),
+    vvip: cellFromList(vvipFeatures, label),
   }));
+};
+
+const buildCompareRows = (
+  freePlan: SubscriptionFreePlanData,
+  vipPlan: SubscriptionPlanData,
+  vvipPlan: SubscriptionPlanData,
+  freeApi?: SubscriptionApiPlan,
+  vipApi?: SubscriptionApiPlan,
+  vvipApi?: SubscriptionApiPlan,
+  comparison?: SubscriptionComparisonRow[],
+): SubscriptionCompareRow[] => {
+  const freeParsed = parsePlanCompareFeatures(freeApi);
+  const vipParsed = parsePlanCompareFeatures(vipApi);
+  const vvipParsed = parsePlanCompareFeatures(vvipApi);
+
+  const fromComparison =
+    Array.isArray(comparison) && comparison.length > 0
+      ? comparison
+          .map(row => {
+            const label = pickString(
+              row.feature,
+              row.name,
+              row.title,
+              row.label,
+            );
+            if (!label) {
+              return null;
+            }
+
+            const values = row.values ?? {};
+            const plansMap =
+              row.plans && !Array.isArray(row.plans) ? row.plans : {};
+            const plansList = Array.isArray(row.plans) ? row.plans : [];
+
+            return {
+              label,
+              free: coerceCell(
+                row.free ?? values.free ?? plansMap.free ?? plansList[0],
+              ),
+              vip: coerceCell(
+                row.vip ?? values.vip ?? plansMap.vip ?? plansList[1],
+              ),
+              vvip: coerceCell(
+                row.vvip ?? values.vvip ?? plansMap.vvip ?? plansList[2],
+              ),
+            };
+          })
+          .filter((row): row is SubscriptionCompareRow => Boolean(row))
+      : [];
+
+  const comparisonIsEmpty = fromComparison.every(
+    row => row.free === false && row.vip === false && row.vvip === false,
+  );
+
+  const featureRows =
+    fromComparison.length > 0 && !comparisonIsEmpty
+      ? fromComparison
+      : buildRowsFromFeatures(freeParsed, vipParsed, vvipParsed);
+
+  const metaRows: SubscriptionCompareRow[] = [];
+
+  if (freePlan.durationLabel || vipPlan.durationLabel || vvipPlan.durationLabel) {
+    metaRows.push({
+      label: 'Duration',
+      free: freePlan.durationLabel || false,
+      vip: vipPlan.durationLabel || false,
+      vvip: vvipPlan.durationLabel || false,
+    });
+  }
+
+  if (vipPlan.priceLabel || vvipPlan.priceLabel) {
+    metaRows.push({
+      label: 'Price',
+      free: 'Free',
+      vip: vipPlan.priceLabel || false,
+      vvip: vvipPlan.priceLabel || false,
+    });
+  }
+
+  return [...metaRows, ...featureRows];
 };
 
 const isPaidStatus = (status: string) => {
@@ -533,22 +864,37 @@ const resolveCurrentPlan = (
   const renewsAt = formatRenewDate(
     nested?.renews_at ??
       nested?.next_billing_date ??
-      nested?.expires_at ??
-      nested?.expiry_date ??
       matchedApi?.renews_at ??
       matchedApi?.next_billing_date ??
-      matchedApi?.expires_at ??
       normalized.renews_at ??
-      normalized.next_billing_date ??
+      normalized.next_billing_date,
+  );
+  const expiresAt = formatRenewDate(
+    nested?.expires_at ??
+      nested?.expiry_date ??
+      matchedApi?.expires_at ??
+      matchedApi?.expiry_date ??
       normalized.expires_at,
   );
+
+  const tier: SubscriptionCurrentPlan['tier'] =
+    mapped === vvipPlan
+      ? 'VVIP'
+      : mapped === vipPlan
+        ? 'VIP'
+        : normalizePlanTier(
+            pickString(nested?.type, nested?.name, nested?.plan, nested?.title),
+          );
 
   return {
     title,
     priceLabel,
     period,
     renewsAt,
-    isPaid: Boolean(mapped) || isPaidStatus(pickString(nested?.payment_status)),
+    expiresAt,
+    isPaid: Boolean(mapped) || isPaidStatus(pickString(nested?.payment_status, nested?.status)),
+    tier,
+    apiId: pickString(nested?.id, mapped?.apiId, matchedApi?.id),
   };
 };
 
@@ -587,10 +933,13 @@ export const mapSubscriptions = (
     vipPlan,
     vvipPlan,
     compareRows: buildCompareRows(
-      freePlan.features,
-      vipPlan.features,
-      vvipPlan.features,
-      normalized.comparison,
+      freePlan,
+      vipPlan,
+      vvipPlan,
+      freePlanApi,
+      vipPlanApi,
+      vvipPlanApi,
+      normalized.comparison ?? normalized.compare,
     ),
     currentPlan: resolveCurrentPlan(
       normalized,
@@ -599,5 +948,110 @@ export const mapSubscriptions = (
       vvipPlan,
       plans,
     ),
+  };
+};
+
+export type CurrentSubscriptionResponse = {
+  success?: boolean | number;
+  message?: string;
+  subscription?: SubscriptionApiPlan | null;
+  current_subscription?: SubscriptionApiPlan | null;
+  current_plan?: SubscriptionApiPlan | string | number | null;
+  plan?: SubscriptionApiPlan | null;
+  package?: SubscriptionApiPlan | null;
+  data?:
+    | SubscriptionApiPlan
+    | {
+        subscription?: SubscriptionApiPlan | null;
+        current_subscription?: SubscriptionApiPlan | null;
+        current_plan?: SubscriptionApiPlan | null;
+        plan?: SubscriptionApiPlan | null;
+        package?: SubscriptionApiPlan | null;
+      }
+    | null;
+};
+
+const isPlanObject = (value: unknown): value is SubscriptionApiPlan =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const pickCurrentPlanObject = (
+  response?: CurrentSubscriptionResponse | null,
+): SubscriptionApiPlan | null => {
+  if (!response || typeof response !== 'object') {
+    return null;
+  }
+
+  const nested =
+    response.data && typeof response.data === 'object' && !Array.isArray(response.data)
+      ? response.data
+      : null;
+
+  const candidates: unknown[] = [
+    response.current_subscription,
+    response.subscription,
+    response.plan,
+    response.package,
+    typeof response.current_plan === 'object' ? response.current_plan : null,
+    nested && 'current_subscription' in nested ? nested.current_subscription : null,
+    nested && 'subscription' in nested ? nested.subscription : null,
+    nested && 'plan' in nested ? nested.plan : null,
+    nested && 'package' in nested ? nested.package : null,
+    nested && 'current_plan' in nested ? nested.current_plan : null,
+    nested,
+  ];
+
+  return (
+    candidates.find(
+      item =>
+        isPlanObject(item) &&
+        (item.name ||
+          item.title ||
+          item.type ||
+          item.plan ||
+          item.id ||
+          item.price_label ||
+          item.payment_status),
+    ) ?? null
+  );
+};
+
+export const mapCurrentSubscription = (
+  response?: CurrentSubscriptionResponse | null,
+): SubscriptionCurrentPlan => {
+  const current = pickCurrentPlanObject(response);
+
+  if (!current) {
+    return EMPTY_PLANS.currentPlan;
+  }
+
+  const title =
+    pickString(current.name, current.title, current.plan, current.type) || 'Free';
+  const price = pickNumber(current.price ?? current.amount);
+  const currency = pickString(current.currency) || 'PKR';
+  const priceLabel =
+    pickString(current.price_label) ||
+    (price ? formatPriceLabel(price, currency) : '');
+  const period = formatDurationLabel(current);
+  const renewsAt = formatRenewDate(
+    current.renews_at ?? current.next_billing_date,
+  );
+  const expiresAt = formatRenewDate(current.expires_at ?? current.expiry_date);
+  const tier = normalizePlanTier(
+    pickString(current.type, current.name, current.plan, current.title),
+  );
+  const isPaid =
+    isPaidStatus(pickString(current.payment_status, current.status)) ||
+    tier === 'VIP' ||
+    tier === 'VVIP';
+
+  return {
+    title,
+    priceLabel,
+    period,
+    renewsAt,
+    expiresAt,
+    isPaid,
+    tier,
+    apiId: pickString(current.id),
   };
 };

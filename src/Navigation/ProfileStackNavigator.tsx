@@ -67,6 +67,7 @@ export type ProfileStackParamList = {
     plan: 'VIP' | 'VVIP';
     price: number;
     priceLabel: string;
+    subscriptionId: string;
   };
   PremiumSuccess: {
     plan: 'VIP' | 'VVIP';

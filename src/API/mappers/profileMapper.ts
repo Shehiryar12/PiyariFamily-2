@@ -37,6 +37,7 @@ export type ProfileApiData = {
   phone_verified?: boolean;
   is_serious_member?: boolean;
   show_verified_badge?: boolean;
+  membership_badge?: string | null;
   location?: string | null;
   latitude?: number | string | null;
   longitude?: number | string | null;
@@ -100,6 +101,7 @@ export type SettingsProfileData = {
   isProfileComplete: boolean;
   isSeriousMember: boolean;
   showVerifiedBadge: boolean;
+  membershipBadge: string;
   profilePhoto: string | null;
   profilePictureVisible: boolean;
   additionalPhotosVisible: boolean;
@@ -432,6 +434,10 @@ const overlayProfileFlags = (
     if (extra.show_verified_badge !== undefined) {
       profile.show_verified_badge = extra.show_verified_badge;
     }
+    const membershipBadge = source.membership_badge ?? source.membershipBadge;
+    if (typeof membershipBadge === 'string' && membershipBadge.trim()) {
+      profile.membership_badge = membershipBadge.trim();
+    }
     if (extra.phone_verified !== undefined) {
       profile.phone_verified = extra.phone_verified;
     }
@@ -618,6 +624,14 @@ const mapGetProfileFields = (
     profile.show_verified_badge = showVerifiedBadge;
   }
 
+  if ('membership_badge' in obj || 'membershipBadge' in obj) {
+    const membershipBadge = pick('membership_badge', 'membershipBadge');
+    profile.membership_badge =
+      membershipBadge == null || membershipBadge === ''
+        ? null
+        : String(membershipBadge);
+  }
+
   const profession = pick('profession', 'job_title');
   if (typeof profession === 'string') {
     profile.profession = profession;
@@ -749,6 +763,10 @@ export const resolveProfileData = (source: unknown): ProfileApiData => {
     show_verified_badge: pickProfileField(
       fromApi.show_verified_badge,
       cached?.show_verified_badge,
+    ),
+    membership_badge: pickProfileField(
+      fromApi.membership_badge,
+      cached?.membership_badge,
     ),
     profile_completed: pickProfileField(
       fromApi.profile_completed,
@@ -1365,6 +1383,7 @@ export const mapProfileToSettings = (
     isVerified: Boolean(profile?.is_verified),
     isProfileComplete: parseVisibilityFlag(profile?.profile_completed) === true,
     isSeriousMember: parseVisibilityFlag(profile?.is_serious_member) === true,
+    membershipBadge: String(profile?.membership_badge ?? '').trim(),
     showVerifiedBadge:
       parseVisibilityFlag(profile?.show_verified_badge) === true ||
       parseVisibilityFlag(

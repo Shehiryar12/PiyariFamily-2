@@ -29,6 +29,7 @@ import {
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
+import { toCompletePaymentParams } from '../../Functions/subscriptionNavigation';
 import { useHideTabBar } from '../../Functions/useHideTabBar';
 import { fs, hp, wp } from '../../Functions/responsive';
 
@@ -81,15 +82,14 @@ const PremiumPaywallScreen = () => {
   );
 
   const openPayment = () => {
-    if (!vipPlan?.apiId && !vipPlan?.priceLabel) {
+    const params = vipPlan ? toCompletePaymentParams(vipPlan) : null;
+
+    if (!params) {
+      Toast.show('Please select an available plan', Toast.LONG);
       return;
     }
 
-    navigation.navigate('CompletePayment', {
-      plan: vipPlan.id,
-      price: vipPlan.price,
-      priceLabel: vipPlan.priceLabel,
-    });
+    navigation.navigate('CompletePayment', params);
   };
 
   const lockedFeatures = vipPlan?.features ?? [];

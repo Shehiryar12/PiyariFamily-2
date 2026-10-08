@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,7 +17,13 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Toast from 'react-native-simple-toast';
 import ScreenHeader from '../../Components/ScreenHeader';
+import {
+  Api,
+  getApiErrorMessage,
+  isApiSuccess,
+} from '../../API';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
@@ -25,6 +32,32 @@ import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
 import { useHideTabBar } from '../../Functions/useHideTabBar';
 import { fs, hp, wp } from '../../Functions/responsive';
+
+const digitsOnly = (value: string) => value.replace(/\D/g, '');
+
+const formatCardNumber = (value: string) =>
+  digitsOnly(value)
+    .slice(0, 16)
+    .replace(/(\d{4})(?=\d)/g, '$1 ')
+    .trim();
+
+const formatExpiry = (value: string) => {
+  const digits = digitsOnly(value).slice(0, 4);
+  if (digits.length <= 2) {
+    return digits;
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+};
+
+const isValidExpiry = (value: string) => {
+  const match = value.match(/^(\d{2})\/(\d{2})$/);
+  if (!match) {
+    return false;
+  }
+
+  const month = Number(match[1]);
+  return month >= 1 && month <= 12;
+};
 
 type RouteProps = RouteProp<ProfileStackParamList, 'CompletePayment'>;
 type NavigationProp = NativeStackNavigationProp<
@@ -74,21 +107,90 @@ const PAYMENT_METHODS: MethodConfig[] = [
 const CompletePaymentScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProps>();
-  const { plan, priceLabel } = route.params;
+  const { plan, priceLabel, subscriptionId } = route.params;
   const insets = useSafeAreaInsets();
-  const [method, setMethod] = useState<PaymentMethod>('google');
+  const [method, setMethod] = useState<PaymentMethod>('card');
   const [cardExpanded, setCardExpanded] = useState(true);
-  const [cardHolder, setCardHolder] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
+  const [cardHolder, setCardHolder] = useState('Ali Akbar');
+  const [cardNumber, setCardNumber] = useState(formatCardNumber('4111111111111111'));
+  const [expiry, setExpiry] = useState('12/28');
+  const [cvv, setCvv] = useState('123');
+  const [paying, setPaying] = useState(false);
   useHideTabBar();
 
-  const handlePay = () => {
-    navigation.navigate('PremiumSuccess', {
-      plan,
-      priceLabel,
-    });
+  const handlePay = async () => {
+    if (paying) {
+      return;
+    }
+
+    if (!subscriptionId) {
+      Toast.show('Please select a plan first', Toast.LONG);
+      return;
+    }
+
+    const holderName = cardHolder.trim();
+    const number = digitsOnly(cardNumber);
+    const expiryDate = expiry.trim();
+    const cvvCode = digitsOnly(cvv);
+
+    if (!holderName || !number || !expiryDate || !cvvCode) {
+      setMethod('card');
+      setCardExpanded(true);
+      Toast.show('Please fill in all card details', Toast.LONG);
+      return;
+    }
+
+    if (number.length < 13 || number.length > 16) {
+      Toast.show('Please enter a valid card number', Toast.LONG);
+      return;
+    }
+
+    if (!isValidExpiry(expiryDate)) {
+      Toast.show('Please enter expiry as MM/YY', Toast.LONG);
+      return;
+    }
+
+    if (cvvCode.length < 3 || cvvCode.length > 4) {
+      Toast.show('Please enter a valid CVV', Toast.LONG);
+      return;
+    }
+
+    setPaying(true);
+
+    try {
+
+      const res = await Api.subscribe({
+        subscription_id: subscriptionId,
+        card_holder_name: holderName,
+        card_number: number,
+        expiry_date: expiryDate,
+        cvv: cvvCode,
+      });
+      if (isApiSuccess(res.status, res.data?.success) && res.data?.success !== false) {
+        Toast.show(res.data?.message ?? 'Payment successful', Toast.LONG);
+        navigation.navigate('PremiumSuccess', {
+          plan,
+          priceLabel,
+          nextBilling:
+            res.data?.next_billing_date ??
+            res.data?.renews_at ??
+            res.data?.expires_at ??
+            res.data?.data?.next_billing_date ??
+            res.data?.data?.renews_at ??
+            res.data?.data?.expires_at,
+        });
+        return;
+      }
+
+      Toast.show(res.data?.message ?? 'Payment failed. Please try again.', Toast.LONG);
+    } catch (error) {
+      Toast.show(
+        getApiErrorMessage(error, 'Payment failed. Please try again.'),
+        Toast.LONG,
+      );
+    } finally {
+      setPaying(false);
+    }
   };
 
   const renderInput = (
@@ -108,6 +210,8 @@ const CompletePaymentScreen = () => {
         onChangeText={onChangeText}
         secureTextEntry={options?.secure}
         keyboardType={options?.keyboard}
+        editable={!paying}
+        autoCorrect={false}
       />
     </View>
   );
@@ -222,16 +326,16 @@ const CompletePaymentScreen = () => {
                   'credit-card-outline',
                   Strings.cardNumber,
                   cardNumber,
-                  setCardNumber,
+                  text => setCardNumber(formatCardNumber(text)),
                   { keyboard: 'number-pad' },
                 )}
                 {renderInput(
                   'calendar-outline',
                   Strings.expiryDate,
                   expiry,
-                  setExpiry,
+                  text => setExpiry(formatExpiry(text)),
                 )}
-                {renderInput('lock-outline', Strings.cvv, cvv, setCvv, {
+                {renderInput('lock-outline', Strings.cvv, cvv, text => setCvv(digitsOnly(text).slice(0, 4)), {
                   secure: true,
                   keyboard: 'number-pad',
                 })}
@@ -254,19 +358,26 @@ const CompletePaymentScreen = () => {
           ]}
         >
           <TouchableOpacity
-            style={styles.secureBar}
+            style={[styles.secureBar, paying && styles.secureBarDisabled]}
             activeOpacity={0.9}
             onPress={handlePay}
+            disabled={paying}
           >
             <View style={styles.secureBarContent}>
-              <Icon name="lock-outline" size={fs(18)} color={Colors.white} />
-              <Text style={styles.secureBarText}>
-                {Strings.paySecurely.replace(
-                  '{amount}',
-                  priceLabel.replace('PKR ', ''),
-                )}
-              </Text>
-              <Icon name="arrow-right" size={fs(18)} color={Colors.white} />
+              {paying ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <>
+                  <Icon name="lock-outline" size={fs(18)} color={Colors.white} />
+                  <Text style={styles.secureBarText}>
+                    {Strings.paySecurely.replace(
+                      '{amount}',
+                      priceLabel.replace('PKR ', ''),
+                    )}
+                  </Text>
+                  <Icon name="arrow-right" size={fs(18)} color={Colors.white} />
+                </>
+              )}
             </View>
           </TouchableOpacity>
         </View>
@@ -317,6 +428,9 @@ const styles = StyleSheet.create({
     borderRadius: wp('4%'),
     paddingHorizontal: wp('4.5%'),
     paddingVertical: hp('1.6%'),
+  },
+  secureBarDisabled: {
+    opacity: 0.7,
   },
   secureBarContent: {
     flex: 1,

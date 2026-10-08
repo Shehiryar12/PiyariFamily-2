@@ -85,6 +85,7 @@ const HomeScreen = () => {
   const displayFeatured = featuredMatches;
   const displaySuggested = suggestedMatches;
   const [loading, setLoading] = useState(true);
+  const [showPremiumBanner, setShowPremiumBanner] = useState(true);
   const [liking, setLiking] = useState(false);
   const [showAllSuggested, setShowAllSuggested] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -138,6 +139,7 @@ const HomeScreen = () => {
 
     try {
       const res = await Api.getHomeMatches();
+      
       const isSuccess =
         res?.status == 200 ||
         res?.status == 201 ||
@@ -146,9 +148,12 @@ const HomeScreen = () => {
 
       if (!isSuccess) {
         applyHomePayload([], []);
+        setShowPremiumBanner(true);
         return;
       }
+
       const mapped = mapHomeMatches(res?.data);
+      setShowPremiumBanner(!mapped.hasPaidPackage);
       const greetingParts = mapHomeGreeting(mapped.greeting);
       const title =
         greetingParts.title && !greetingHasEmail(greetingParts.title)
@@ -599,6 +604,7 @@ const HomeScreen = () => {
         <Text style={styles.greeting}>{displayGreeting}</Text>
         <Text style={styles.subtitle}>{displaySubtitle}</Text>
 
+        {showPremiumBanner ? (
         <TouchableOpacity
           style={styles.premiumBanner}
           activeOpacity={0.88}
@@ -619,6 +625,7 @@ const HomeScreen = () => {
           </View>
           <Icon name="chevron-right" size={fs(22)} color={Colors.primary} />
         </TouchableOpacity>
+        ) : null}
 
         {displayFeatured?.length > 0 ? (
           <>

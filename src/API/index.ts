@@ -22,8 +22,13 @@ export type {
   CountriesResponse,
   CountryApiItem,
 } from './mappers/countryMapper';
-export { mapSubscriptions, mapPlanFeatures } from './mappers/subscriptionMapper';
+export {
+  mapSubscriptions,
+  mapPlanFeatures,
+  mapCurrentSubscription,
+} from './mappers/subscriptionMapper';
 export type {
+  CurrentSubscriptionResponse,
   SubscriptionApiPlan,
   SubscriptionCompareRow,
   SubscriptionCurrentPlan,

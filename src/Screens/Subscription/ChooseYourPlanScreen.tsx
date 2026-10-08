@@ -23,7 +23,9 @@ import {
   Api,
   getApiErrorMessage,
   isApiSuccess,
+  mapCurrentSubscription,
   mapSubscriptions,
+  type SubscriptionCurrentPlan,
   type SubscriptionPlansData,
 } from '../../API';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
@@ -33,6 +35,7 @@ import { PREMIUM_PERKS } from '../../Constant/Subscription';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { getHiddenTabFooterPadding } from '../../Functions/safeArea';
+import { toCompletePaymentParams } from '../../Functions/subscriptionNavigation';
 import { useHideTabBar } from '../../Functions/useHideTabBar';
 import { popStackOrGoHome } from '../../Functions/tabNavigation';
 import { fs, hp, wp } from '../../Functions/responsive';
@@ -42,26 +45,84 @@ type NavigationProp = NativeStackNavigationProp<
   'ChooseYourPlan'
 >;
 
+const matchBoughtPlan = (
+  current: SubscriptionCurrentPlan,
+  mapped: SubscriptionPlansData,
+): 'VIP' | 'VVIP' | null => {
+  if (!current.isPaid) {
+    return null;
+  }
+
+  if (mapped.vvipPlan.apiId && current.apiId === mapped.vvipPlan.apiId) {
+    return 'VVIP';
+  }
+
+  if (mapped.vipPlan.apiId && current.apiId === mapped.vipPlan.apiId) {
+    return 'VIP';
+  }
+
+  if (current.tier === 'VVIP' && mapped.vvipPlan.apiId) {
+    return 'VVIP';
+  }
+
+  if (current.tier === 'VIP' && mapped.vipPlan.apiId) {
+    return 'VIP';
+  }
+
+  return null;
+};
+
 const ChooseYourPlanScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
   useHideTabBar();
   const [plans, setPlans] = useState<SubscriptionPlansData>(mapSubscriptions());
   const [loading, setLoading] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState<'VIP' | 'VVIP' | null>(null);
 
   const fetchSubscriptions = useCallback(async () => {
     setLoading(true);
 
     try {
-      const res = await Api.getSubscriptions();
-      if (isApiSuccess(res?.status, res?.data?.success)) {
-        setPlans(mapSubscriptions(res?.data));
+      const [plansResult, currentResult] = await Promise.allSettled([
+        Api.getSubscriptions(),
+        Api.getCurrentSubscription(),
+      ]);
+
+      let mapped = mapSubscriptions();
+
+      if (plansResult.status === 'fulfilled') {
+        const res = plansResult.value;
+        if (isApiSuccess(res?.status, res?.data?.success)) {
+          mapped = mapSubscriptions(res?.data);
+          setPlans(mapped);
+        } else {
+          Toast.show(
+            res?.data?.message ?? 'Failed to load subscription plans',
+            Toast.LONG,
+          );
+        }
       } else {
         Toast.show(
-          res?.data?.message ?? 'Failed to load subscription plans',
+          getApiErrorMessage(
+            plansResult.reason,
+            'Failed to load subscription plans',
+          ),
           Toast.LONG,
         );
       }
+
+      let boughtPlan: 'VIP' | 'VVIP' | null = null;
+      if (currentResult.status === 'fulfilled') {
+        const currentRes = currentResult.value;
+        if (isApiSuccess(currentRes?.status, currentRes?.data?.success)) {
+          boughtPlan = matchBoughtPlan(
+            mapCurrentSubscription(currentRes?.data),
+            mapped,
+          );
+        }
+      }
+      setSelectedPlan(boughtPlan);
     } catch (error) {
       Toast.show(
         getApiErrorMessage(error, 'Failed to load subscription plans'),
@@ -92,15 +153,23 @@ const ChooseYourPlanScreen = () => {
 
   const openPayment = (plan: 'VIP' | 'VVIP') => {
     const selected = plan === 'VIP' ? plans.vipPlan : plans.vvipPlan;
-    if (!selected.apiId && !selected.priceLabel) {
+    const params = toCompletePaymentParams(selected);
+
+    if (!params) {
+      Toast.show('Please select an available plan', Toast.LONG);
       return;
     }
 
-    navigation.navigate('CompletePayment', {
-      plan,
-      price: selected.price,
-      priceLabel: selected.priceLabel,
-    });
+    navigation.navigate('CompletePayment', params);
+  };
+
+  const handleGetPremium = () => {
+    if (!selectedPlan) {
+      Toast.show('Please select a plan first', Toast.LONG);
+      return;
+    }
+
+    openPayment(selectedPlan);
   };
 
   const renderPlanFeature = (text: string, light = false) => (
@@ -168,7 +237,7 @@ const ChooseYourPlanScreen = () => {
       />
 
       <ScrollView
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {loading ? (
@@ -210,59 +279,89 @@ const ChooseYourPlanScreen = () => {
         </View>
 
         {plans.vipPlan.apiId ? (
-          <LinearGradient
-            colors={plans.vipPlan.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.premiumCard}
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => setSelectedPlan('VIP')}
           >
-            {renderPlanBadge(plans.vipPlan.badge, true)}
-            {renderPlanCardHeader(
-              'star',
-              plans.vipPlan.title,
-              plans.vipPlan.durationLabel,
-              true,
-              plans.vipPlan.badge,
-            )}
-            <Text style={styles.planPrice}>{plans.vipPlan.priceLabel}</Text>
-            {plans.vipPlan.features.map(item => renderPlanFeature(item, true))}
-            <TouchableOpacity
-              style={styles.selectBtn}
-              activeOpacity={0.85}
-              onPress={() => openPayment('VIP')}
+            <LinearGradient
+              colors={plans.vipPlan.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={[
+                styles.premiumCard,
+                selectedPlan === 'VIP' && styles.premiumCardSelected,
+              ]}
             >
-              <Text style={styles.selectBtnText}>{Strings.selectPlan}</Text>
-              <Icon name="arrow-right" size={fs(16)} color={Colors.goldLight} />
-            </TouchableOpacity>
-          </LinearGradient>
+              {renderPlanBadge(plans.vipPlan.badge, true)}
+              {renderPlanCardHeader(
+                'star',
+                plans.vipPlan.title,
+                plans.vipPlan.durationLabel,
+                true,
+                plans.vipPlan.badge,
+              )}
+              <Text style={styles.planPrice}>{plans.vipPlan.priceLabel}</Text>
+              {plans.vipPlan.features.map(item => renderPlanFeature(item, true))}
+              <View
+                style={[
+                  styles.selectBtn,
+                  selectedPlan === 'VIP' && styles.selectBtnSelected,
+                ]}
+              >
+                <Text style={styles.selectBtnText}>
+                  {selectedPlan === 'VIP' ? 'Selected' : Strings.selectPlan}
+                </Text>
+                <Icon
+                  name={selectedPlan === 'VIP' ? 'check' : 'arrow-right'}
+                  size={fs(16)}
+                  color={Colors.goldLight}
+                />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         ) : null}
 
         {plans.vvipPlan.apiId ? (
-          <LinearGradient
-            colors={plans.vvipPlan.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.premiumCard}
+          <TouchableOpacity
+            activeOpacity={0.92}
+            onPress={() => setSelectedPlan('VVIP')}
           >
-            {renderPlanBadge(plans.vvipPlan.badge, true)}
-            {renderPlanCardHeader(
-              'crown',
-              plans.vvipPlan.title,
-              plans.vvipPlan.durationLabel,
-              true,
-              plans.vvipPlan.badge,
-            )}
-            <Text style={styles.planPrice}>{plans.vvipPlan.priceLabel}</Text>
-            {plans.vvipPlan.features.map(item => renderPlanFeature(item, true))}
-            <TouchableOpacity
-              style={styles.selectBtn}
-              activeOpacity={0.85}
-              onPress={() => openPayment('VVIP')}
+            <LinearGradient
+              colors={plans.vvipPlan.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={[
+                styles.premiumCard,
+                selectedPlan === 'VVIP' && styles.premiumCardSelected,
+              ]}
             >
-              <Text style={styles.selectBtnText}>{Strings.selectPlan}</Text>
-              <Icon name="arrow-right" size={fs(16)} color={Colors.white} />
-            </TouchableOpacity>
-          </LinearGradient>
+              {renderPlanBadge(plans.vvipPlan.badge, true)}
+              {renderPlanCardHeader(
+                'crown',
+                plans.vvipPlan.title,
+                plans.vvipPlan.durationLabel,
+                true,
+                plans.vvipPlan.badge,
+              )}
+              <Text style={styles.planPrice}>{plans.vvipPlan.priceLabel}</Text>
+              {plans.vvipPlan.features.map(item => renderPlanFeature(item, true))}
+              <View
+                style={[
+                  styles.selectBtn,
+                  selectedPlan === 'VVIP' && styles.selectBtnSelected,
+                ]}
+              >
+                <Text style={styles.selectBtnText}>
+                  {selectedPlan === 'VVIP' ? 'Selected' : Strings.selectPlan}
+                </Text>
+                <Icon
+                  name={selectedPlan === 'VVIP' ? 'check' : 'arrow-right'}
+                  size={fs(16)}
+                  color={Colors.white}
+                />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         ) : null}
 
         <View style={styles.perksGrid}>
@@ -305,7 +404,7 @@ const ChooseYourPlanScreen = () => {
       >
         <PrimaryButton
           title={Strings.getPremiumNow}
-          onPress={() => openPayment('VIP')}
+          onPress={handleGetPremium}
           showArrow
         />
       </View>
@@ -439,6 +538,11 @@ const styles = StyleSheet.create({
     padding: wp('4.5%'),
     marginBottom: hp('1.5%'),
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  premiumCardSelected: {
+    borderColor: Colors.white,
   },
   planTopRow: {
     flexDirection: 'row',
@@ -486,6 +590,9 @@ const styles = StyleSheet.create({
     paddingVertical: hp('1.3%'),
     marginTop: hp('0.5%'),
     gap: wp('1.5%'),
+  },
+  selectBtnSelected: {
+    backgroundColor: 'rgba(255,255,255,0.28)',
   },
   selectBtnText: {
     fontSize: fs(14),

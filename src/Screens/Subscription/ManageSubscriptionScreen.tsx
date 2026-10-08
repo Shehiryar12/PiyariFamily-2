@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,11 +21,13 @@ import {
   Api,
   getApiErrorMessage,
   isApiSuccess,
+  mapCurrentSubscription,
   mapSubscriptions,
   type SubscriptionPlanData,
 } from '../../API';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
+import { toCompletePaymentParams } from '../../Functions/subscriptionNavigation';
 import { useHideTabBar } from '../../Functions/useHideTabBar';
 import { fs, hp, wp } from '../../Functions/responsive';
 
@@ -76,33 +79,66 @@ const ManageSubscriptionScreen = () => {
   );
   const [currentTitle, setCurrentTitle] = useState('');
   const [currentMeta, setCurrentMeta] = useState('');
+  const [isPaid, setIsPaid] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchSubscriptions = useCallback(async () => {
-    try {
-      const res = await Api.getSubscriptions();
+    setLoading(true);
 
-      if (isApiSuccess(res?.status, res?.data?.success)) {
-        const mapped = mapSubscriptions(res?.data);
-        setUpgradePlan(
-          mapped.vvipPlan.apiId ? mapped.vvipPlan : mapped.vipPlan,
+    try {
+      const [currentResult, plansResult] = await Promise.allSettled([
+        Api.getCurrentSubscription(),
+        Api.getSubscriptions(),
+      ]);
+      if (currentResult.status === 'fulfilled') {
+        const currentRes = currentResult.value;
+        if (isApiSuccess(currentRes?.status, currentRes?.data?.success)) {
+          const current = mapCurrentSubscription(currentRes?.data);
+          setIsPaid(current.isPaid);
+          setCurrentTitle(
+            current.title
+              ? `${current.title}${current.isPaid ? ` — ${Strings.activeStatus}` : ''}`
+              : Strings.freePlan,
+          );
+          setCurrentMeta(
+            [
+              current.priceLabel,
+              current.period,
+              current.renewsAt ? `Renews ${current.renewsAt}` : '',
+              !current.renewsAt && current.expiresAt
+                ? `Expires ${current.expiresAt}`
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' · '),
+          );
+        }
+      } else {
+        Toast.show(
+          getApiErrorMessage(
+            currentResult.reason,
+            'Failed to load current subscription',
+          ),
+          Toast.LONG,
         );
-        const current = mapped.currentPlan;
-        setCurrentTitle(
-          current.title
-            ? `${current.title}${current.isPaid ? ` — ${Strings.activeStatus}` : ''}`
-            : '',
-        );
-        setCurrentMeta(
-          [current.priceLabel, current.period, current.renewsAt ? `Renews ${current.renewsAt}` : '']
-            .filter(Boolean)
-            .join(' · '),
-        );
+      }
+
+      if (plansResult.status === 'fulfilled') {
+        const plansRes = plansResult.value;
+        if (isApiSuccess(plansRes?.status, plansRes?.data?.success)) {
+          const mapped = mapSubscriptions(plansRes?.data);
+          setUpgradePlan(
+            mapped.vvipPlan.apiId ? mapped.vvipPlan : mapped.vipPlan,
+          );
+        }
       }
     } catch (error) {
       Toast.show(
-        getApiErrorMessage(error, 'Failed to load subscription plans'),
+        getApiErrorMessage(error, 'Failed to load current subscription'),
         Toast.LONG,
       );
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -131,6 +167,12 @@ const ManageSubscriptionScreen = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.currentPlanCard}>
+          {loading ? (
+            <View style={styles.currentLoader}>
+              <ActivityIndicator color={Colors.white} />
+            </View>
+          ) : (
+            <>
           <View style={styles.crownCircle}>
             <Icon name="crown" size={fs(22)} color={Colors.gold} />
           </View>
@@ -145,9 +187,15 @@ const ManageSubscriptionScreen = () => {
           </View>
 
           <View style={styles.activePill}>
-            <View style={styles.activeDot} />
-            <Text style={styles.activePillText}>{Strings.activeStatus}</Text>
+            <View
+              style={[styles.activeDot, !isPaid && styles.inactiveDot]}
+            />
+            <Text style={styles.activePillText}>
+              {isPaid ? Strings.activeStatus : Strings.freePlan}
+            </Text>
           </View>
+            </>
+          )}
         </View>
 
         <Text style={styles.sectionLabel}>{Strings.planOptions}</Text>
@@ -159,15 +207,16 @@ const ManageSubscriptionScreen = () => {
           title={Strings.upgradeToPlatinum}
           subtitle={Strings.upgradeToPlatinumSubtitle}
           onPress={() => {
-            if (!upgradePlan?.apiId && !upgradePlan?.priceLabel) {
+            const params = upgradePlan
+              ? toCompletePaymentParams(upgradePlan)
+              : null;
+
+            if (!params) {
+              Toast.show('Please select an available plan', Toast.LONG);
               return;
             }
 
-            navigation.navigate('CompletePayment', {
-              plan: upgradePlan.id,
-              price: upgradePlan.price,
-              priceLabel: upgradePlan.priceLabel,
-            });
+            navigation.navigate('CompletePayment', params);
           }}
         />
 
@@ -229,6 +278,13 @@ const styles = StyleSheet.create({
     padding: wp('4%'),
     marginBottom: hp('2.5%'),
     gap: wp('3%'),
+    minHeight: hp('9%'),
+  },
+  currentLoader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: hp('1%'),
   },
   crownCircle: {
     width: wp('13%'),
@@ -267,6 +323,9 @@ const styles = StyleSheet.create({
     height: wp('2%'),
     borderRadius: wp('1%'),
     backgroundColor: '#2E7D32',
+  },
+  inactiveDot: {
+    backgroundColor: Colors.textLight,
   },
   activePillText: {
     fontSize: fs(10),

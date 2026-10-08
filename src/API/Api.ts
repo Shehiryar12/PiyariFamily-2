@@ -39,7 +39,10 @@ import {
   type NotificationsResponse,
 } from './mappers/notificationMapper';
 import type { CountriesResponse } from './mappers/countryMapper';
-import type { SubscriptionsResponse } from './mappers/subscriptionMapper';
+import type {
+  CurrentSubscriptionResponse,
+  SubscriptionsResponse,
+} from './mappers/subscriptionMapper';
 import type { ShortlistInterestResponse, ShortlistResponse, ShortlistTab } from './mappers/shortlistMapper';
 
 type ProfileResponse = {
@@ -517,6 +520,48 @@ export const Api = {
 
   getSubscriptions: () =>
     apiClient.get<SubscriptionsResponse>(ENDPOINTS.SUBSCRIPTIONS),
+
+  getCurrentSubscription: () =>
+    apiClient.get<CurrentSubscriptionResponse>(ENDPOINTS.SUBSCRIPTIONS_CURRENT),
+
+  subscribe: async (payload: {
+    subscription_id: string;
+    card_holder_name: string;
+    card_number: string;
+    expiry_date: string;
+    cvv: string;
+  }) => {
+    type SubscribeResponse = {
+      success?: boolean | number;
+      message?: string;
+      next_billing_date?: string;
+      renews_at?: string;
+      expires_at?: string;
+      expiry_date?: string;
+      data?: {
+        next_billing_date?: string;
+        renews_at?: string;
+        expires_at?: string;
+        expiry_date?: string;
+      };
+    };
+
+    try {
+      return await apiClient.postForm<SubscribeResponse>(
+        ENDPOINTS.SUBSCRIPTIONS_SUBSCRIBE,
+        payload,
+      );
+    } catch (error) {
+      if (isMissingEndpoint(error) || isMethodNotAllowed(error)) {
+        return apiClient.postForm<SubscribeResponse>(
+          ENDPOINTS.SUBSCRIPTIONS,
+          payload,
+        );
+      }
+
+      throw error;
+    }
+  },
 
   updateAccountStatus: async (
     action: 'deactivate' | 'activate',

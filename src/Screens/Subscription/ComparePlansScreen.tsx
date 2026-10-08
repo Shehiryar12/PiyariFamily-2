@@ -31,6 +31,7 @@ import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
+import { toCompletePaymentParams } from '../../Functions/subscriptionNavigation';
 import { useHideTabBar } from '../../Functions/useHideTabBar';
 import { fs, hp, wp } from '../../Functions/responsive';
 
@@ -109,29 +110,51 @@ const ComparePlansScreen = () => {
     );
   };
 
+  const visibleTiers = (
+    [
+      { tier: 'free' as const, show: true, title: plans.freePlan.title || 'Free' },
+      {
+        tier: 'vip' as const,
+        show: Boolean(plans.vipPlan.apiId || plans.vipPlan.features.length),
+        title: plans.vipPlan.title || 'VIP',
+      },
+      {
+        tier: 'vvip' as const,
+        show: Boolean(plans.vvipPlan.apiId || plans.vvipPlan.features.length),
+        title: plans.vvipPlan.title || 'VVIP',
+      },
+    ] as const
+  ).filter(column => column.show);
+
+  const tabStyles: Record<ColumnTier, { wrap: object; text: object }> = {
+    free: { wrap: styles.tabFree, text: styles.tabFreeText },
+    vip: { wrap: styles.tabVip, text: styles.tabVipText },
+    vvip: { wrap: styles.tabVvip, text: styles.tabVvipText },
+  };
+
   const renderPlanTabs = () => (
     <View style={styles.planTabsRow}>
-      <View style={styles.tabFree}>
-        <Text style={styles.tabFreeText}>{plans.freePlan.title || 'Free'}</Text>
-      </View>
-      <View style={styles.tabVip}>
-        <Text style={styles.tabVipText}>{plans.vipPlan.title || 'VIP'}</Text>
-      </View>
-      <View style={styles.tabVvip}>
-        <Text style={styles.tabVvipText}>{plans.vvipPlan.title || 'VVIP'}</Text>
-      </View>
+      {visibleTiers.map(column => (
+        <View key={column.tier} style={tabStyles[column.tier].wrap}>
+          <Text style={tabStyles[column.tier].text} numberOfLines={1}>
+            {column.title}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 
-  const renderPlanValues = (
-    free: boolean | string,
-    vip: boolean | string,
-    vvip: boolean | string,
-  ) => (
+  const renderPlanValues = (row: {
+    free: boolean | string;
+    vip: boolean | string;
+    vvip: boolean | string;
+  }) => (
     <View style={styles.planValuesRow}>
-      <View style={styles.planValueCell}>{renderCell(free, 'free')}</View>
-      <View style={styles.planValueCell}>{renderCell(vip, 'vip')}</View>
-      <View style={styles.planValueCell}>{renderCell(vvip, 'vvip')}</View>
+      {visibleTiers.map(column => (
+        <View key={column.tier} style={styles.planValueCell}>
+          {renderCell(row[column.tier], column.tier)}
+        </View>
+      ))}
     </View>
   );
 
@@ -156,7 +179,7 @@ const ComparePlansScreen = () => {
         />
 
         <ScrollView
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scrollContent,
             { paddingBottom: getFooterBottomPadding(insets.bottom) },
@@ -174,33 +197,42 @@ const ComparePlansScreen = () => {
           </View>
 
           <View style={styles.compareCard}>
-            {plans.compareRows.map((row, index) => (
-              <View
-                key={row.label}
-                style={[
-                  styles.compareRow,
-                  index > 0 && styles.compareRowBorder,
-                ]}
-              >
-                <Text style={styles.featureLabel}>{row.label}</Text>
-                {renderPlanValues(row.free, row.vip, row.vvip)}
+            {plans.compareRows.length ? (
+              plans.compareRows.map((row, index) => (
+                <View
+                  key={`${row.label}-${index}`}
+                  style={[
+                    styles.compareRow,
+                    index > 0 && styles.compareRowBorder,
+                  ]}
+                >
+                  <Text style={styles.featureLabel}>{row.label}</Text>
+                  {renderPlanValues(row)}
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyText}>
+                  Comparison features are not available yet.
+                </Text>
               </View>
-            ))}
+            )}
           </View>
 
           <View style={styles.actionButtons}>
             <PrimaryButton
               title={Strings.upgradeToPremium}
               onPress={() => {
-                if (!plans.vipPlan.apiId && !plans.vipPlan.priceLabel) {
+                const params = toCompletePaymentParams(
+                  plans.vipPlan.apiId ? plans.vipPlan : plans.vvipPlan,
+                );
+
+                if (!params) {
+                  Toast.show('Please select an available plan', Toast.LONG);
                   return;
                 }
 
-                navigation.navigate('CompletePayment', {
-                  plan: 'VIP',
-                  price: plans.vipPlan.price,
-                  priceLabel: plans.vipPlan.priceLabel,
-                });
+                navigation.navigate('CompletePayment', params);
               }}
               showArrow
             />
@@ -352,6 +384,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     textAlign: 'center',
     lineHeight: hp('1.6%'),
+  },
+  emptyWrap: {
+    paddingVertical: hp('4%'),
+    paddingHorizontal: wp('6%'),
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: fs(13),
+    fontFamily: Fonts.medium,
+    color: Colors.textLight,
+    textAlign: 'center',
   },
   actionButtons: {
     marginTop: hp('2.5%'),

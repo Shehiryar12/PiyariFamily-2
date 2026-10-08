@@ -53,7 +53,18 @@ describe('GET /subscriptions', () => {
     expect(plans.vipPlan.priceLabel).toBe('PKR 2,499');
     expect(plans.vipPlan.features).toEqual(['Unlimited Chats', 'VIP Badge']);
     expect(plans.vipPlan.price).toBe(2499);
-    expect(plans.compareRows[0].label).toBe('Basic search');
+    expect(plans.compareRows.find(row => row.label === 'Chats')).toEqual({
+      label: 'Chats',
+      free: 'Limited',
+      vip: 'Unlimited',
+      vvip: false,
+    });
+    expect(plans.compareRows.find(row => row.label === 'Search')).toEqual({
+      label: 'Search',
+      free: true,
+      vip: false,
+      vvip: false,
+    });
     expect(plans.currentPlan.title).toBe('Free');
     expect(plans.currentPlan.isPaid).toBe(false);
     expect(plans.freePlan.badge).toBe('');
@@ -93,6 +104,33 @@ describe('GET /subscriptions', () => {
     expect(plans.vipPlan.title).toBe('VIP');
     expect(plans.vipPlan.badge).toBe('Popular');
     expect(plans.vipPlan.durationLabel).toBe('30 Days');
+  });
+
+  it('maps comparison rows from API comparison matrix', () => {
+    const plans = mapSubscriptions({
+      success: 200,
+      plans: [
+        { id: 1, name: 'Free', type: 'Free', features: { display: ['Search'] } },
+        { id: 2, name: 'VIP', type: 'VIP', price: 1000, features: { display: ['Chats'] } },
+      ],
+      comparison: [
+        { feature: 'Chats', free: 'Limited', vip: 'Unlimited', vvip: 'Unlimited' },
+        { feature: 'Boosts', free: false, vip: '5/Month', vvip: true },
+      ],
+    });
+
+    expect(plans.compareRows.find(row => row.label === 'Chats')).toEqual({
+      label: 'Chats',
+      free: 'Limited',
+      vip: 'Unlimited',
+      vvip: 'Unlimited',
+    });
+    expect(plans.compareRows.find(row => row.label === 'Boosts')).toEqual({
+      label: 'Boosts',
+      free: false,
+      vip: '5/Month',
+      vvip: true,
+    });
   });
 
   it('does not copy hardcoded PLAN_OPTIONS prices onto mapped VIP', () => {
