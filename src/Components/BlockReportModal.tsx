@@ -58,7 +58,7 @@ const BlockReportModal = ({
         <Text style={styles.subtitle}>{subtitle}</Text>
 
         <ScrollView
-          showsVerticalScrollIndicator={true}
+          showsVerticalScrollIndicator={false}
           style={styles.optionsScroll}
           bounces={false}
         >

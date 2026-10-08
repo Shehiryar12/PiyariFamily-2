@@ -446,7 +446,7 @@ const SearchScreen = () => {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
       <ScrollView
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
