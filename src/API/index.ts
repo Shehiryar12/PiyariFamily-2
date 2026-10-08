@@ -22,6 +22,13 @@ export type {
   CountriesResponse,
   CountryApiItem,
 } from './mappers/countryMapper';
+export { mapFaqs, mapLegalDoc } from './mappers/helpMapper';
+export type {
+  FaqsResponse,
+  HelpFaqItem,
+  HelpLegalDoc,
+  LegalDocResponse,
+} from './mappers/helpMapper';
 export {
   mapSubscriptions,
   mapPlanFeatures,

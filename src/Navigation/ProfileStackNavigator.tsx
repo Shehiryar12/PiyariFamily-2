@@ -8,6 +8,7 @@ import {
   ContactSupportScreen,
   EditProfileScreen,
   HelpCenterScreen,
+  LegalDocumentScreen,
   MyRewardsScreen,
   NotificationsScreen,
   RequestHistoryScreen,
@@ -43,6 +44,7 @@ export type ProfileStackParamList = {
   ApprovedPhotoAccess: undefined;
   HelpCenter: undefined;
   ContactSupport: undefined;
+  LegalDocument: { type: 'privacy' | 'terms' };
   ViewProfileGallery: {
     userId?: string;
     name: string;
@@ -116,6 +118,7 @@ const ProfileStackNavigator = () => {
       />
       <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
       <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
+      <Stack.Screen name="LegalDocument" component={LegalDocumentScreen} />
       <Stack.Screen
         name="ViewProfileGallery"
         component={ViewProfileGalleryScreen}

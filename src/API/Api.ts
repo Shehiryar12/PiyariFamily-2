@@ -45,6 +45,10 @@ import type {
   SubscriptionsResponse,
 } from './mappers/subscriptionMapper';
 import type { ShortlistInterestResponse, ShortlistResponse, ShortlistTab } from './mappers/shortlistMapper';
+import type {
+  FaqsResponse,
+  LegalDocResponse,
+} from './mappers/helpMapper';
 
 type ProfileResponse = {
   success?: boolean;
@@ -518,6 +522,14 @@ export const Api = {
 
   getMatchProfile: (profileId: string) =>
     apiClient.get<MatchProfileResponse>(`${ENDPOINTS.MATCHES}/${profileId}`),
+
+  getFaqs: () => apiClient.get<FaqsResponse>(ENDPOINTS.FAQS),
+
+  getPrivacyPolicy: () =>
+    apiClient.get<LegalDocResponse>(ENDPOINTS.PRIVACY_POLICY),
+
+  getTermsConditions: () =>
+    apiClient.get<LegalDocResponse>(ENDPOINTS.TERMS_CONDITIONS),
 
   getSubscriptions: () =>
     apiClient.get<SubscriptionsResponse>(ENDPOINTS.SUBSCRIPTIONS),

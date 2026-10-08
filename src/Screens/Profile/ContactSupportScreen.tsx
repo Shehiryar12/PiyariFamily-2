@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Linking,
@@ -21,7 +21,7 @@ import PrimaryButton from '../../Components/PrimaryButton';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
-import { SUPPORT_EMAIL, SUPPORT_TOPICS } from '../../Constant/HelpCenter';
+import { SUPPORT_EMAIL } from '../../Constant/HelpCenter';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { getFooterBottomPadding } from '../../Functions/safeArea';
@@ -37,24 +37,11 @@ const ContactSupportScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
   const user = useAppSelector(selectUser);
-  const [topic, setTopic] = useState(SUPPORT_TOPICS[0]);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
   const senderName = user?.name?.trim() || 'PiyariFamily member';
   const senderEmail = user?.email?.trim() || '';
-
-  const mailBody = useMemo(() => {
-    const lines = [
-      `Name: ${senderName}`,
-      senderEmail ? `Email: ${senderEmail}` : null,
-      `Topic: ${topic}`,
-      '',
-      message.trim(),
-    ].filter(Boolean);
-
-    return lines.join('\n');
-  }, [message, senderEmail, senderName, topic]);
 
   const openMail = async (subject: string, body: string) => {
     const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
@@ -88,9 +75,18 @@ const ContactSupportScreen = () => {
       return;
     }
 
+    const body = [
+      `Name: ${senderName}`,
+      senderEmail ? `Email: ${senderEmail}` : null,
+      '',
+      message.trim(),
+    ]
+      .filter(Boolean)
+      .join('\n');
+
     setSending(true);
     try {
-      await openMail(`PiyariFamily support — ${topic}`, mailBody);
+      await openMail('PiyariFamily support', body);
       Toast.show(Strings.contactSupportSent, Toast.LONG);
       setMessage('');
     } catch {
@@ -132,13 +128,23 @@ const ContactSupportScreen = () => {
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
           >
-            <View style={styles.heroIcon}>
-              <Icon name="headset" size={fs(22)} color={Colors.gold} />
+            <View style={styles.heroRow}>
+              <View style={styles.heroIcon}>
+                <Icon name="headset" size={fs(22)} color={Colors.gold} />
+              </View>
+              <View style={styles.heroCopy}>
+                <Text style={styles.heroTitle}>
+                  {Strings.contactSupportHeroTitle}
+                </Text>
+                <Text style={styles.heroSubtitle}>
+                  {Strings.contactSupportHeroSubtitle}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.heroTitle}>{Strings.contactSupportHeroTitle}</Text>
-            <Text style={styles.heroSubtitle}>
-              {Strings.contactSupportHeroSubtitle}
-            </Text>
+            <View style={styles.heroChip}>
+              <Icon name="clock-outline" size={fs(14)} color={Colors.gold} />
+              <Text style={styles.heroChipText}>{Strings.contactSupportHours}</Text>
+            </View>
           </LinearGradient>
 
           <TouchableOpacity
@@ -153,51 +159,33 @@ const ContactSupportScreen = () => {
             <View style={styles.emailCopy}>
               <Text style={styles.emailLabel}>{Strings.contactSupportEmailLabel}</Text>
               <Text style={styles.emailValue}>{Strings.contactSupportEmail}</Text>
-              <Text style={styles.emailHint}>{Strings.contactSupportHours}</Text>
             </View>
             <Icon name="open-in-new" size={fs(18)} color={Colors.gold} />
           </TouchableOpacity>
 
-          <Text style={styles.sectionLabel}>{Strings.contactSupportTopicLabel}</Text>
-          <View style={styles.topicWrap}>
-            {SUPPORT_TOPICS.map(item => {
-              const active = topic === item;
-              return (
-                <TouchableOpacity
-                  key={item}
-                  style={[styles.topicChip, active && styles.topicChipActive]}
-                  activeOpacity={0.85}
-                  onPress={() => setTopic(item)}
-                >
-                  <Text
-                    style={[styles.topicText, active && styles.topicTextActive]}
-                  >
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={styles.sectionLabel}>{Strings.contactSupportMessageLabel}</Text>
-          <View style={styles.messageBox}>
-            <TextInput
-              style={styles.messageInput}
-              placeholder={Strings.contactSupportMessagePlaceholder}
-              placeholderTextColor={Colors.placeholder}
-              value={message}
-              onChangeText={setMessage}
-              multiline
-              textAlignVertical="top"
+          <View style={styles.formCard}>
+            <Text style={styles.formTitle}>{Strings.contactSupportMessageLabel}</Text>
+            <Text style={styles.formHint}>
+              {Strings.contactSupportMessagePlaceholder}
+            </Text>
+            <View style={styles.messageBox}>
+              <TextInput
+                style={styles.messageInput}
+                placeholder="Write your message..."
+                placeholderTextColor={Colors.placeholder}
+                value={message}
+                onChangeText={setMessage}
+                multiline
+                textAlignVertical="top"
+              />
+            </View>
+            <PrimaryButton
+              title={Strings.contactSupportSend}
+              onPress={handleSend}
+              loading={sending}
+              leftIcon="send-outline"
             />
           </View>
-
-          <PrimaryButton
-            title={Strings.contactSupportSend}
-            onPress={handleSend}
-            loading={sending}
-            leftIcon="send-outline"
-          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -227,29 +215,52 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     borderRadius: wp('4.5%'),
-    padding: wp('5%'),
+    padding: wp('4.5%'),
     marginBottom: hp('1.8%'),
   },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp('3.2%'),
+  },
   heroIcon: {
-    width: wp('11%'),
-    height: wp('11%'),
-    borderRadius: wp('5.5%'),
+    width: wp('12%'),
+    height: wp('12%'),
+    borderRadius: wp('6%'),
     backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: hp('1.2%'),
+  },
+  heroCopy: {
+    flex: 1,
   },
   heroTitle: {
-    fontSize: fs(20),
+    fontSize: fs(18),
     fontFamily: Fonts.bold,
     color: Colors.white,
-    marginBottom: hp('0.5%'),
+    marginBottom: hp('0.35%'),
   },
   heroSubtitle: {
     fontSize: fs(13),
     fontFamily: Fonts.regular,
     color: 'rgba(255,255,255,0.82)',
-    lineHeight: hp('2.3%'),
+    lineHeight: fs(18),
+  },
+  heroChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp('1.5%'),
+    marginTop: hp('1.6%'),
+    paddingHorizontal: wp('3%'),
+    paddingVertical: hp('0.6%'),
+    borderRadius: wp('5%'),
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  heroChipText: {
+    fontSize: fs(11),
+    fontFamily: Fonts.semiBold,
+    color: Colors.goldLight,
   },
   emailCard: {
     flexDirection: 'row',
@@ -259,7 +270,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F3E6C8',
     padding: wp('3.6%'),
-    marginBottom: hp('2.2%'),
+    marginBottom: hp('1.8%'),
     gap: wp('3%'),
   },
   emailIconWrap: {
@@ -284,57 +295,38 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     color: Colors.primary,
   },
-  emailHint: {
-    fontSize: fs(11),
-    fontFamily: Fonts.regular,
-    color: Colors.textLight,
-    marginTop: hp('0.25%'),
-  },
-  sectionLabel: {
-    fontSize: fs(11),
-    fontFamily: Fonts.semiBold,
-    color: Colors.textLight,
-    letterSpacing: 0.5,
-    marginBottom: hp('1%'),
-  },
-  topicWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: wp('2%'),
-    marginBottom: hp('2%'),
-  },
-  topicChip: {
-    paddingHorizontal: wp('3.4%'),
-    paddingVertical: hp('0.75%'),
-    borderRadius: wp('5%'),
-    backgroundColor: Colors.tabActiveBg,
-    borderWidth: 1,
-    borderColor: Colors.tabActiveBg,
-  },
-  topicChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  topicText: {
-    fontSize: fs(12),
-    fontFamily: Fonts.semiBold,
-    color: Colors.primary,
-  },
-  topicTextActive: {
-    color: Colors.white,
-  },
-  messageBox: {
-    minHeight: hp('18%'),
-    borderRadius: wp('3.5%'),
+  formCard: {
+    backgroundColor: Colors.white,
+    borderRadius: wp('4%'),
     borderWidth: 1,
     borderColor: '#F0F0F0',
-    backgroundColor: Colors.white,
+    padding: wp('4%'),
+  },
+  formTitle: {
+    fontSize: fs(15),
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    marginBottom: hp('0.4%'),
+  },
+  formHint: {
+    fontSize: fs(12),
+    fontFamily: Fonts.regular,
+    color: Colors.textLight,
+    lineHeight: fs(17),
+    marginBottom: hp('1.4%'),
+  },
+  messageBox: {
+    minHeight: hp('20%'),
+    borderRadius: wp('3.5%'),
+    borderWidth: 1,
+    borderColor: Colors.focusBorder,
+    backgroundColor: Colors.notificationBg,
     paddingHorizontal: wp('3.5%'),
     paddingVertical: hp('1.2%'),
     marginBottom: hp('2%'),
   },
   messageInput: {
-    minHeight: hp('15%'),
+    minHeight: hp('17%'),
     fontSize: FontSizes.body,
     fontFamily: Fonts.regular,
     color: Colors.primary,

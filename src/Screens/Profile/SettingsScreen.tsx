@@ -25,6 +25,7 @@ import { Api, authService, getApiErrorMessage, isApiSuccess, mapProfileToSetting
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { resetToLogin } from '../../Functions/authNavigation';
 import { navigateToHomeTab, useTabRootBackToHome } from '../../Functions/tabNavigation';
+import { openRateApp } from '../../Functions/openRateApp';
 import { fs, hp, wp } from '../../Functions/responsive';
 import { useAppSelector, selectProfilePhoto, selectUser, store } from '../../Redux';
 
@@ -577,15 +578,24 @@ const SettingsScreen = () => {
           />
           <View style={styles.itemDivider} />
           <SettingItem
+            icon="shield-check-outline"
+            title={Strings.privacyPolicy}
+            subtitle={Strings.privacySubtitle}
+            onPress={() => navigation.navigate('LegalDocument', { type: 'privacy' })}
+          />
+          <View style={styles.itemDivider} />
+          <SettingItem
             icon="file-document-outline"
             title={Strings.termsAndConditions}
             subtitle={Strings.termsSubtitle}
+            onPress={() => navigation.navigate('LegalDocument', { type: 'terms' })}
           />
           <View style={styles.itemDivider} />
           <SettingItem
             icon="star-outline"
             title={Strings.rateTheApp}
             subtitle={Strings.rateAppSubtitle}
+            onPress={openRateApp}
           />
         </View>
 

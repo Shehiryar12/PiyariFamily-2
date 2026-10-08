@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,19 +9,22 @@ import {
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Toast from 'react-native-simple-toast';
 import ScreenHeader from '../../Components/ScreenHeader';
+import {
+  Api,
+  getApiErrorMessage,
+  isApiSuccess,
+  mapFaqs,
+  type HelpFaqItem,
+} from '../../API';
 import { AuthStyles, FontSizes } from '../../Constant/AuthStyles';
 import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
-import {
-  HELP_ARTICLES,
-  HELP_CATEGORIES,
-  type HelpCategory,
-} from '../../Constant/HelpCenter';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
 import { fs, hp, wp } from '../../Functions/responsive';
@@ -33,13 +37,49 @@ type NavigationProp = NativeStackNavigationProp<
 const HelpCenterScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<HelpCategory>('all');
-  const [openId, setOpenId] = useState<string | null>(HELP_ARTICLES[0]?.id ?? null);
+  const [category, setCategory] = useState('all');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [faqs, setFaqs] = useState<HelpFaqItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchHelp = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const res = await Api.getFaqs();
+      if (isApiSuccess(res?.status, res?.data?.success)) {
+        const mapped = mapFaqs(res.data);
+        setFaqs(mapped);
+        setOpenId(mapped[0]?.id ?? null);
+      } else {
+        setFaqs([]);
+        Toast.show(res?.data?.message ?? 'Failed to load FAQs', Toast.LONG);
+      }
+    } catch (error) {
+      setFaqs([]);
+      Toast.show(getApiErrorMessage(error, 'Failed to load FAQs'), Toast.LONG);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchHelp();
+    }, [fetchHelp]),
+  );
+
+  const categories = useMemo(() => {
+    const labels = Array.from(
+      new Set(faqs.map(item => item.category).filter(Boolean)),
+    );
+    return ['all', ...labels];
+  }, [faqs]);
 
   const articles = useMemo(() => {
     const needle = query.trim().toLowerCase();
 
-    return HELP_ARTICLES.filter(item => {
+    return faqs.filter(item => {
       const inCategory = category === 'all' || item.category === category;
       if (!inCategory) {
         return false;
@@ -54,7 +94,7 @@ const HelpCenterScreen = () => {
         item.answer.toLowerCase().includes(needle)
       );
     });
-  }, [category, query]);
+  }, [category, faqs, query]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
@@ -105,29 +145,36 @@ const HelpCenterScreen = () => {
           ) : null}
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          {HELP_CATEGORIES.map(item => {
-            const active = category === item.id;
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={[styles.chip, active && styles.chipActive]}
-                activeOpacity={0.85}
-                onPress={() => setCategory(item.id)}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {categories.length > 1 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+          >
+            {categories.map(item => {
+              const active = category === item;
+              const label = item === 'all' ? 'All' : item;
+              return (
+                <TouchableOpacity
+                  key={item}
+                  style={[styles.chip, active && styles.chipActive]}
+                  activeOpacity={0.85}
+                  onPress={() => setCategory(item)}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : null}
 
-        {articles.length ? (
+        {loading ? (
+          <View style={styles.loaderWrap}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : articles.length ? (
           articles.map(item => {
             const open = openId === item.id;
             return (
@@ -163,21 +210,6 @@ const HelpCenterScreen = () => {
             <Text style={styles.emptyText}>{Strings.helpCenterNoResults}</Text>
           </View>
         )}
-
-        <View style={styles.ctaCard}>
-          <View style={styles.ctaCopy}>
-            <Text style={styles.ctaTitle}>{Strings.helpCenterContactCta}</Text>
-            <Text style={styles.ctaHint}>{Strings.helpCenterContactCtaHint}</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.ctaBtn}
-            activeOpacity={0.88}
-            onPress={() => navigation.navigate('ContactSupport')}
-          >
-            <Text style={styles.ctaBtnText}>{Strings.contactSupport}</Text>
-            <Icon name="arrow-right" size={fs(16)} color={Colors.white} />
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -267,9 +299,15 @@ const styles = StyleSheet.create({
     fontSize: fs(12),
     fontFamily: Fonts.semiBold,
     color: Colors.primary,
+    textTransform: 'capitalize',
   },
   chipTextActive: {
     color: Colors.white,
+  },
+  loaderWrap: {
+    minHeight: hp('18%'),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   articleCard: {
     backgroundColor: Colors.white,
@@ -317,42 +355,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.bodySmall,
     fontFamily: Fonts.regular,
     color: Colors.textLight,
-  },
-  ctaCard: {
-    marginTop: hp('1.2%'),
-    backgroundColor: Colors.notificationBg,
-    borderRadius: wp('4%'),
-    borderWidth: 1,
-    borderColor: Colors.goldLight,
-    padding: wp('4%'),
-  },
-  ctaCopy: {
-    marginBottom: hp('1.4%'),
-  },
-  ctaTitle: {
-    fontSize: fs(15),
-    fontFamily: Fonts.bold,
-    color: Colors.primary,
-    marginBottom: hp('0.3%'),
-  },
-  ctaHint: {
-    fontSize: fs(12),
-    fontFamily: Fonts.regular,
-    color: Colors.textLight,
-  },
-  ctaBtn: {
-    height: hp('5.2%'),
-    borderRadius: wp('3%'),
-    backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: wp('1.5%'),
-  },
-  ctaBtnText: {
-    fontSize: fs(13),
-    fontFamily: Fonts.semiBold,
-    color: Colors.white,
   },
 });
 

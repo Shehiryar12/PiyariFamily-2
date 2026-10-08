@@ -104,12 +104,3 @@ export const HELP_ARTICLES: HelpArticle[] = [
 ];
 
 export const SUPPORT_EMAIL = 'support@piyarifamily.com';
-
-export const SUPPORT_TOPICS = [
-  'Photo privacy',
-  'Profile & verification',
-  'Matches & shortlist',
-  'Subscription & billing',
-  'Account access',
-  'Other',
-];

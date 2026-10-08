@@ -17,6 +17,7 @@ const HIDDEN_TAB_BAR_ROUTES: Record<string, string[]> = {
     'ApprovedPhotoAccess',
     'HelpCenter',
     'ContactSupport',
+    'LegalDocument',
     'ViewProfileGallery',
     'ProfileDetail',
     'MatchSuccess',

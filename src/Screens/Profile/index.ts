@@ -10,6 +10,7 @@ export { default as ApprovedPhotoAccessScreen } from './ApprovedPhotoAccessScree
 export { default as ViewProfileGalleryScreen } from './ViewProfileGalleryScreen';
 export { default as HelpCenterScreen } from './HelpCenterScreen';
 export { default as ContactSupportScreen } from './ContactSupportScreen';
+export { default as LegalDocumentScreen } from './LegalDocumentScreen';
 export { default as ChangePasswordScreen } from './ChangePasswordScreen';
 export { default as AccountOptionsScreen } from './AccountOptionsScreen';
 export { default as AccountDeactivatedScreen } from './AccountDeactivatedScreen';
