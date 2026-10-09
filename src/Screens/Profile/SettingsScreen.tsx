@@ -127,8 +127,8 @@ const SettingsScreen = () => {
   const [isSeriousMember, setIsSeriousMember] = useState(false);
   const [showVerifiedBadge, setShowVerifiedBadge] = useState(false);
   const [membershipBadge, setMembershipBadge] = useState('');
-  const [profilePictureVisible, setProfilePictureVisible] = useState(true);
-  const [additionalPhotosVisible, setAdditionalPhotosVisible] = useState(true);
+  const [profilePictureVisible, setProfilePictureVisible] = useState(false);
+  const [additionalPhotosVisible, setAdditionalPhotosVisible] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
