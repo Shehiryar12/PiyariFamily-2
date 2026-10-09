@@ -25,7 +25,10 @@ import {
   SelectCountryScreen,
 } from '../Screens/ProfileSetup';
 import { getActiveRouteName } from '../Functions/navigationPersistence';
-import { AccountDeactivatedScreen } from '../Screens/Profile';
+import {
+  AccountDeactivatedScreen,
+  LegalDocumentScreen,
+} from '../Screens/Profile';
 import { setNavigationState, store } from '../Redux';
 import { navigationRef } from './navigationRef';
 import MainTabNavigator from './MainTabNavigator';
@@ -35,6 +38,7 @@ export type AuthStackParamList = {
   Onboarding: undefined;
   Login: { email?: string };
   SignUp: undefined;
+  LegalDocument: { type: 'privacy' | 'terms' };
   VerifyEmail: {
     email: string;
     autoSend?: boolean;
@@ -85,6 +89,7 @@ const AuthNavigator = () => {
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="LegalDocument" component={LegalDocumentScreen} />
         <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="CheckEmail" component={CheckEmailScreen} />

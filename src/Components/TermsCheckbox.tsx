@@ -1,5 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { FontSizes } from '../Constant/AuthStyles';
 import { Colors } from '../Constant/Colors';
@@ -10,16 +12,15 @@ import { fs, hp, wp } from '../Functions/responsive';
 type Props = {
   checked: boolean;
   onToggle: (value: boolean) => void;
-  onTermsPress?: () => void;
-  onPrivacyPress?: () => void;
 };
 
-const TermsCheckbox = ({
-  checked,
-  onToggle,
-  onTermsPress,
-  onPrivacyPress,
-}: Props) => {
+type LegalNav = NativeStackNavigationProp<{
+  LegalDocument: { type: 'privacy' | 'terms' };
+}>;
+
+const TermsCheckbox = ({ checked, onToggle }: Props) => {
+  const navigation = useNavigation<LegalNav>();
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
@@ -32,11 +33,19 @@ const TermsCheckbox = ({
       </TouchableOpacity>
       <Text style={styles.text}>
         {Strings.termsPrefix}
-        <Text style={styles.link} onPress={onTermsPress}>
+        <Text
+          style={styles.link}
+          onPress={() => navigation.navigate('LegalDocument', { type: 'terms' })}
+        >
           {Strings.termsOfService}
         </Text>
         {Strings.termsAnd}
-        <Text style={styles.link} onPress={onPrivacyPress}>
+        <Text
+          style={styles.link}
+          onPress={() =>
+            navigation.navigate('LegalDocument', { type: 'privacy' })
+          }
+        >
           {Strings.privacyPolicy}
         </Text>
       </Text>

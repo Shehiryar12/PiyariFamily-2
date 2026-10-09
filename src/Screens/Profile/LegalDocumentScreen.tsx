@@ -17,7 +17,7 @@ import { Colors } from '../../Constant/Colors';
 import { Fonts } from '../../Constant/Fonts';
 import { Strings } from '../../Constant/Strings';
 import { ProfileStackParamList } from '../../Navigation/ProfileStackNavigator';
-import { fs } from '../../Functions/responsive';
+import { fs, hp, wp } from '../../Functions/responsive';
 
 type RouteProps = RouteProp<ProfileStackParamList, 'LegalDocument'>;
 type NavigationProp = NativeStackNavigationProp<
@@ -25,33 +25,62 @@ type NavigationProp = NativeStackNavigationProp<
   'LegalDocument'
 >;
 
-const PAGE_HEAD = `
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { margin: 0; padding: 16px; font-size: 15px; line-height: 1.6; color: #71717B; }
-    img, table { max-width: 100%; }
-    h1, h2, h3 { color: #6B041D; }
-  </style>
-`;
+const toPage = (body: string) => {
+  const style = `
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <style>
+      html, body {
+        margin: 0;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        overflow-x: hidden !important;
+      }
+      body {
+        padding: ${Math.round(hp('1.6%'))}px ${Math.round(wp('5%'))}px ${Math.round(hp('6%'))}px;
+        box-sizing: border-box;
+        font-size: ${fs(14)}px;
+        line-height: 1.6;
+        color: ${Colors.textLight};
+        background: ${Colors.background};
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+      }
+      h1, h2, h3, h4 { color: ${Colors.primary}; line-height: 1.35; }
+      img, video, iframe, table, pre { max-width: 100% !important; height: auto !important; }
+      p, li { margin: 0 0 12px; }
+    </style>
+  `;
 
-const toPage = (html: string) =>
-  `<html><head>${PAGE_HEAD}</head><body>${html}</body></html>`;
+  if (/<head[^>]*>/i.test(body)) {
+    return body.replace(/<head[^>]*>/i, match => `${match}${style}`);
+  }
+
+  return `<!DOCTYPE html><html><head>${style}</head><body>${body}</body></html>`;
+};
 
 const LegalDocumentScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const { type } = useRoute<RouteProps>().params;
+  const route = useRoute<RouteProps>();
+  const type = route.params?.type === 'terms' ? 'terms' : 'privacy';
   const title =
-    type === 'privacy' ? Strings.privacyPolicy : Strings.termsAndConditions;
+    type === 'terms' ? Strings.termsAndConditions : Strings.privacyPolicy;
   const [html, setHtml] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     const load = async () => {
       try {
         const res =
           type === 'privacy'
             ? await Api.getPrivacyPolicy()
             : await Api.getTermsConditions();
+
+        if (!active) {
+          return;
+        }
 
         if (isApiSuccess(res?.status, res?.data?.success)) {
           const doc = mapLegalDoc(res.data, title);
@@ -60,20 +89,28 @@ const LegalDocumentScreen = () => {
           Toast.show(res?.data?.message ?? 'Failed to load document', Toast.LONG);
         }
       } catch (error) {
-        Toast.show(
-          getApiErrorMessage(error, 'Failed to load document'),
-          Toast.LONG,
-        );
+        if (active) {
+          Toast.show(
+            getApiErrorMessage(error, 'Failed to load document'),
+            Toast.LONG,
+          );
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
     load();
+
+    return () => {
+      active = false;
+    };
   }, [title, type]);
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.root} edges={['top', 'left', 'right', 'bottom']}>
       <ScreenHeader title={title} onBack={() => navigation.goBack()} />
 
       {loading ? (
@@ -86,6 +123,7 @@ const LegalDocumentScreen = () => {
           source={{ html: toPage(html) }}
           style={styles.webView}
           showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
         />
       ) : (
         <View style={styles.center}>
